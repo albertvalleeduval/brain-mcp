@@ -36,7 +36,13 @@ export const NAV_PATH: Record<NavName, string> = {
 };
 
 export function parseRoute(pathname: string): Route {
-  const p = decodeURIComponent(pathname);
+  let p: string;
+  try {
+    p = decodeURIComponent(pathname);
+  } catch {
+    // Malformed %-escape (e.g. a bad deep link) — don't crash the whole app.
+    return { name: "home" };
+  }
   if (p.startsWith("/fichier/")) return { name: "file", path: p.slice("/fichier/".length) };
   const hit = (Object.keys(NAV_PATH) as NavName[]).find((n) => NAV_PATH[n] === p);
   return { name: hit ?? "home" };

@@ -29,8 +29,16 @@ async function send<T>(url: string, method: string, body: unknown): Promise<T> {
     body: JSON.stringify(body),
   });
   if (res.status === 401) throw new Unauthorized();
-  const data = (await res.json()) as T & { error?: string };
-  if (!res.ok) throw new Error(data.error ?? `${url} → ${res.status}`);
+  // A 5xx may carry an HTML error page, not JSON — parse defensively so the
+  // real status surfaces instead of a misleading "Unexpected token '<'".
+  let data: (T & { error?: string }) | null = null;
+  try {
+    data = (await res.json()) as T & { error?: string };
+  } catch {
+    /* non-JSON body */
+  }
+  if (!res.ok) throw new Error(data?.error ?? `${url} → ${res.status}`);
+  if (!data) throw new Error(`${url} → réponse invalide`);
   return data;
 }
 

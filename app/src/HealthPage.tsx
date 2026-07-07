@@ -3,7 +3,7 @@
 import type { HealthReport } from "./types";
 
 /** Guess the file a broken [[wiki-target]] should live at, from its id prefix
- *  (person-teo → people/teo.md, project-x → projects/x.md, …). null if unsure. */
+ *  (person-jane → people/jane.md, project-x → projects/x.md, …). null if unsure. */
 export function guessPath(target: string): string | null {
   const t = target.trim().toLowerCase().replace(/\s+/g, "-");
   const map: Record<string, string> = {
@@ -46,7 +46,7 @@ export function HealthPage({
       {nothing && <div className="ok-big">Rien à signaler. Le brain est propre.</div>}
 
       {health.brokenLinks.length > 0 && (
-        <section className="hsec">
+        <section className="hsec crit">
           <div className="eyebrow"><span>Liens cassés</span><span className="count">{health.brokenLinks.length}</span></div>
           {health.brokenLinks.map((b, i) => {
             const guess = guessPath(b.target);

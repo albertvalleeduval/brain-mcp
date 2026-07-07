@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { fetchGraph, fetchHealth, fetchHistory, fetchFile, fetchReplay, fetchSearch, saveFile, Unauthorized } from "./api";
 import type { BrainGraph, HealthReport, Commit, ReplayFrame } from "./types";
-import { Sidebar, PanelIcon } from "./Sidebar";
+import { Sidebar } from "./Sidebar";
 import { Graph, type LabelDensity } from "./Graph";
 import { Reader } from "./Reader";
 import { HealthPage } from "./HealthPage";
@@ -10,9 +10,11 @@ import { ProjetsPage } from "./ProjetsPage";
 import { EcheancesPage } from "./EcheancesPage";
 import { InboxPage } from "./InboxPage";
 import { JournalPage } from "./JournalPage";
-import { TYPE_COLORS, TYPE_LABELS } from "./palette";
 import { useLocation, parseRoute, navigate, fileUrl, NAV_PATH } from "./router";
 import type { NavName } from "./router";
+import { useThemeMode } from "./theme";
+import { ThemeSwitch } from "./ThemeSwitch";
+import { TYPE_COLORS, TYPE_LABELS } from "./palette";
 
 type Boot =
   | { s: "loading" }
@@ -36,7 +38,11 @@ function localDate(): string {
 export function App() {
   const [boot, setBoot] = useState<Boot>({ s: "loading" });
   const [search, setSearch] = useState("");
-  const [density, setDensity] = useState<LabelDensity>(0);
+  // Thème : auto (coucher du soleil) | clair | sombre — voir theme.ts.
+  const { mode: themeMode, theme, setMode: setThemeMode } = useThemeMode();
+  // Densité au chargement : « aucun » — le brain s'ouvre nu, les labels
+  // viennent à la demande.
+  const [density, setDensity] = useState<LabelDensity>(2);
   const [replay, setReplay] = useState<{ frames: ReplayFrame[]; i: number; playing: boolean } | null>(null);
   const [replayLoading, setReplayLoading] = useState(false);
   const timer = useRef<number | null>(null);
@@ -52,17 +58,28 @@ export function App() {
   }, []);
 
   const route = parseRoute(useLocation());
+  const openPath = route.name === "file" ? route.path : null;
   const openFile = useCallback((path: string) => navigate(fileUrl(path)), []);
   const closeFile = useCallback(() => navigate("/"), []);
 
   useEffect(() => {
     const q = search.trim();
     if (q.length < 3) { setContentHits(new Set()); return; }
+    let dead = false;
     const t = window.setTimeout(() => {
-      fetchSearch(q).then((r) => setContentHits(new Set(r.paths))).catch(() => setContentHits(new Set()));
+      fetchSearch(q)
+        .then((r) => { if (!dead) setContentHits(new Set(r.paths)); })
+        .catch(() => { if (!dead) setContentHits(new Set()); });
     }, 250);
-    return () => window.clearTimeout(t);
+    return () => { dead = true; window.clearTimeout(t); };
   }, [search]);
+
+  // Forcer le mode édition ne vaut que pour l'ouverture d'un stub fraîchement
+  // créé : dès qu'on quitte ce fichier, on oublie, sinon toute revisite rouvre
+  // en édition pour le reste de la session.
+  useEffect(() => {
+    if (pendingEdit && openPath !== pendingEdit) setPendingEdit(null);
+  }, [openPath, pendingEdit]);
 
   const load = useCallback(async () => {
     try {
@@ -118,6 +135,8 @@ export function App() {
     try {
       const { frames } = await fetchReplay();
       if (frames.length) setReplay({ frames, i: 0, playing: true });
+    } catch (e) {
+      alert((e as Error).message);
     } finally {
       setReplayLoading(false);
     }
@@ -129,7 +148,7 @@ export function App() {
     const stem = path.slice(path.lastIndexOf("/") + 1).replace(/\.md$/, "");
     const title = stem.replace(/[-_]+/g, " ").replace(/^./, (c) => c.toUpperCase());
     const stub =
-      `---\nid: ${target}\ntype: ${TYPE_FOR_FOLDER[folder] ?? "note"}\ntags: []\nstatus: draft\n` +
+      `---\nid: ${JSON.stringify(target)}\ntype: ${TYPE_FOR_FOLDER[folder] ?? "note"}\ntags: []\nstatus: draft\n` +
       `summary_l0: "À compléter."\nupdated: ${localDate()}\n---\n\n# ${title}\n\nÀ compléter.\n`;
     try {
       await saveFile(path, stub);
@@ -166,29 +185,25 @@ export function App() {
   const { graph, health, history, nowBody } = boot;
   const frame = replay ? replay.frames[replay.i] : null;
   const visible = frame ? new Set(frame.files) : null;
-  const openPath = route.name === "file" ? route.path : null;
 
   return (
-    <div className={`frame${collapsed ? " collapsed" : ""}`}>
-      {!collapsed && (
-        <Sidebar
-          graph={graph}
-          health={health}
-          history={history}
-          nowBody={nowBody}
-          search={search}
-          route={route.name}
-          onSearch={setSearch}
-          onNav={(r: NavName) => navigate(NAV_PATH[r])}
-          onCollapse={toggleCollapse}
-        />
-      )}
+    <div className="frame">
+      <Sidebar
+        graph={graph}
+        health={health}
+        history={history}
+        nowBody={nowBody}
+        search={search}
+        route={route.name}
+        collapsed={collapsed}
+        onSearch={setSearch}
+        onNav={(r: NavName) => navigate(NAV_PATH[r])}
+        onCollapse={toggleCollapse}
+        themeMode={themeMode}
+        themeResolved={theme}
+        onThemeSet={setThemeMode}
+      />
       <main className="pane">
-        {collapsed && (
-          <button className="side-open" onClick={toggleCollapse} aria-label="Ouvrir la sidebar" title="Ouvrir la sidebar">
-            <PanelIcon />
-          </button>
-        )}
         {route.name === "health" ? (
           <HealthPage health={health} onOpen={openFile} onCreate={createStub} />
         ) : route.name === "decisions" ? (
@@ -204,7 +219,12 @@ export function App() {
         ) : (
           <>
             <div className="graph-wrap">
-              <Graph graph={graph} stalePaths={stalePaths} search={search} contentHits={contentHits} density={density} visible={visible} onOpen={openFile} />
+              <Graph graph={graph} theme={theme} stalePaths={stalePaths} search={search} contentHits={contentHits} density={density} visible={visible} onOpen={openFile} />
+              {/* Toggle de thème : uniquement sur la page graphe, en overlay
+                  haut-droite (l'exemplaire permanent vit au pied de la sidebar). */}
+              <div className="graph-theme">
+                <ThemeSwitch mode={themeMode} resolved={theme} onSet={setThemeMode} />
+              </div>
             </div>
             {replay && frame && (
               <div className="replay">
@@ -223,12 +243,16 @@ export function App() {
             )}
             <div className="pane-foot">
               <div className="legend">
-                {Object.entries(TYPE_LABELS).map(([k, label]) => (
-                  <span className="legend-item" key={k}>
-                    <span className="legend-sq" style={{ background: TYPE_COLORS[k] }}></span>
-                    {label}
-                  </span>
-                ))}
+                {/* En clair, la couleur code le type : la légende redevient
+                    des pastilles. En sombre (monochrome) la caption suffit. */}
+                {theme === "light" &&
+                  Object.keys(TYPE_LABELS).map((k) => (
+                    <span key={k} className="legend-item">
+                      <span className="legend-sq" style={{ background: TYPE_COLORS[k] }} aria-hidden="true"></span>
+                      {TYPE_LABELS[k]}
+                    </span>
+                  ))}
+                <span>opacité = fraîcheur · pointillé = périmé</span>
               </div>
               <span className="vsep" aria-hidden="true"></span>
               <div className="btns">

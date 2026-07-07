@@ -1,67 +1,54 @@
-# my²brain — design guidelines (direction 1B « Grille suisse »)
+# my²brain — design guidelines
 
-Source : itération design du 2026-07-05, variante 1B retenue.
-Les tokens exacts vivent dans `design/tokens.json`. Ce doc fixe les règles
-d'usage — tout écran de l'app doit pouvoir être justifié par ces règles.
+Two themes, one anatomy. Every visual delta between them lives in the CSS
+tokens (`app/src/styles.css`, the `:root` blocks) and in the graph skins
+(`app/src/palette.ts` → `GRAPH_SKINS`) — components never hardcode colors.
+The theme switch (light | auto | dark) is a segmented control; **auto**
+follows sunset/sunrise for the configured location (`app/src/theme.ts`).
 
-## Esprit
+## Dark — "observatory" (default)
 
-Un artefact imprimé, pas une app SaaS. Papier blanc, encre noire, filets 1px,
-un seul rouge suisse (#e2231a). Zéro radius, zéro ombre, zéro gradient, zéro
-emoji. Si un élément ressemble à une « card », c'est raté : les sections sont
-séparées par des filets et de l'espace, pas par des boîtes.
+An analysis screen, not a SaaS dashboard. Pure black paper, off-white ink,
+neutral greys, a faint white coordinate grid (minor 24px, major 120px) behind
+the graph. Zero hue: the only pigment is a cold console-error red (`--warn`),
+reserved for errors and urgency. Interaction re-inks in pure white
+(`--accent`), never a tint.
 
-## La couleur code le type, l'opacité code la fraîcheur
+Graph: uniform tiny grey discs (r = 3, size encodes nothing), opacity carries
+freshness (premixed toward black — discs stay opaque and mask edges), the
+central "me" node is pure white with a slow breathing halo. Labels mono
+uppercase under the node, dark halo. Nodes micro-drift ~3px on two superposed
+sines (killed by prefers-reduced-motion).
 
-- **Couleur = type de fichier** (palette catégorielle print `color.types`,
-  mappée sur le dossier) : noir = core/racine, ocre = context, outremer =
-  people, sapin = projects, prune = personal, ardoise = decisions, teal =
-  domains, gris = inbox. Une légende accompagne toujours le graph.
-- **Opacité = fraîcheur** : un fichier récent est plein (1.0), un vieux
-  s'estompe (jusqu'à 0.35). Dans les listes texte, la fraîcheur reste des
-  niveaux de gris (ramp `freshness`).
-- **Rouge** : réservé à trois usages — urgence (échéance < 7 j), survol
-  (nœud/edge hover), alerte critique (lien cassé, fichier périmé). Jamais
-  décoratif, jamais un type de nœud.
-- **Périmé** (au-delà du TTL de brain_health) : cercle en pointillés dans la
-  couleur du type, mention rouge dans les listes.
+## Light — "Swiss grid"
 
-## Typographie
+A printed artifact. White paper, near-black ink, 1px rules, one Swiss red
+(`--accent` = `--warn` = #e2231a) for interaction AND urgency. No background
+grid — the grid is the dark mode's signature.
 
-Archivo seule, 4 graisses (400/500/700/800). Eyebrows en 11px uppercase
-letterspaced pour nommer les sections, filets 1px noirs sous chaque eyebrow.
-Chiffres en `tabular-nums` partout où ils s'alignent (dates, compteurs).
-Pas de numéros fantômes ni de titre de vue au-dessus du canvas : le graph
-occupe l'espace, la sidebar suffit à situer (décision produit, 2026-07-06).
+Graph: same mechanics (sphere layout, drift, edge trimming), different skin —
+node color = file type (categorical print palette in `TYPE_COLORS`), node
+size ∝ degree, freshness premixed toward white, red reticle on hover. The
+legend shows the color swatches only in this theme.
 
-## Data-vérité
+## Shared language
 
-La sidebar n'affiche que des données dérivables de l'API du Worker
-(/api/graph, /api/health, /api/file, inbox). Rien d'inventé : pas de
-« fichiers non commités » (le Worker ne voit que l'état GitHub, tout est
-commité par construction), pas de métriques décoratives. Chaque chiffre
-affiché doit avoir une route qui le fournit.
+- **Chakra Petch** is the human voice (titles, navigation, reading); **IBM
+  Plex Mono** is the machine voice (dates, counters, paths, code, graph
+  labels — `tabular-nums` wherever digits align). Light weights: 400 default,
+  never 700+.
+- **The disc replaces the square.** Alert dots, replay thumb, badges — all
+  discs, the graph's node vocabulary.
+- Actions are bare underlined text (no pills, no boxed uppercase buttons).
+- Cards are flat panels ringed by a 1px rule; state lives in the content
+  (red dates for urgent, opacity for done/past), never in ornaments.
+- Data-truth: every figure shown must come from a real API route. No
+  decorative metrics.
 
-## Graph
+## Forbidden (AI-slop markers)
 
-- Taille du nœud ∝ degré ; remplissage = fraîcheur ; forme = état
-  (plein / pointillé si périmé).
-- Hover : le nœud GARDE sa couleur et prend un anneau rouge léger,
-  les arêtes vers ses voisins passent au rouge, ses voisins
-  restent encrés, le reste
-  s'estompe. Les labels n'apparaissent que sur les hubs par défaut
-  (toggle densité : hubs / tous / aucun).
-- Les projets forment une constellation à droite du canvas via une force de
-  clustering (positionnement seulement, jamais d'arêtes structurelles : un lien
-  dans le brain doit porter du sens, et les orphelins doivent rester détectables).
-- Le replay temporel est derrière un bouton, jamais l'état par défaut. Il se
-  joue et **se quitte tout seul** en fin d'historique — pas de bouton quitter.
-- Caption footnote sous le canvas : « N fichiers · N liens · taille ∝ degré ».
-
-## Interdits (marqueurs IA)
-
-Tirets longs (em-dashes) : aucun, nulle part dans l'interface, y compris dans
-les titres affichés (remplacés par un point médian au rendu, fichiers intacts).
-Cards flottantes, gradients, glassmorphism, violet, coins arrondis, ombres
-portées, emojis, hero centré, badges pilule colorés. En cas de doute :
-« est-ce que ça pourrait être imprimé dans un rapport suisse de 1972 ? »
+Em-dashes anywhere in the interface (rendered as a middot). Floating cards,
+gradients, glassmorphism, purple, rounded corners, drop shadows, emojis,
+centered heroes, colored pill badges, decorative noise. When in doubt:
+could it be printed in a 1972 Swiss report (light) or shown on a mission
+screen (dark)?
