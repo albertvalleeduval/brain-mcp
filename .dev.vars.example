@@ -1,0 +1,5 @@
+# Local dev secrets for `wrangler dev`. Copy to `.dev.vars` and fill in.
+# .dev.vars is gitignored. For production use `wrangler secret put <NAME>`.
+GITHUB_CLIENT_ID=""
+GITHUB_CLIENT_SECRET=""
+GITHUB_BRAIN_TOKEN=""
