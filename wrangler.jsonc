@@ -1,0 +1,61 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "brain-mcp",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-06-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "MCP_OBJECT",
+        "class_name": "BrainMCP"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["BrainMCP"]
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "OAUTH_KV",
+      // Create yours with: npx wrangler kv namespace create OAUTH_KV
+      "id": "REPLACE_WITH_KV_ID"
+    }
+  ],
+  // Per-deployment identity. Edit these six values and you're done — no code
+  // changes needed. Secrets (tokens) go in `wrangler secret put`, never here.
+  "vars": {
+    // GitHub login that owns the brain repo.
+    "BRAIN_OWNER": "your-github-login",
+    // Name of your private markdown repo.
+    "BRAIN_REPO": "my-brain",
+    "BRAIN_BRANCH": "main",
+    // The ONLY GitHub login allowed to authenticate (usually = BRAIN_OWNER).
+    "ALLOWED_LOGIN": "your-github-login",
+    // IANA timezone used to date-stamp decisions and captures.
+    "TIMEZONE": "UTC",
+    // Optional: path of the graph's central "me" node ("" to disable).
+    "CENTER_PATH": ""
+  },
+  "assets": {
+    "directory": "app/dist",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": [
+      "/api/*",
+      "/app/*",
+      "/share",
+      "/mcp",
+      "/authorize",
+      "/callback",
+      "/token",
+      "/register",
+      "/.well-known/*"
+    ]
+  }
+}
