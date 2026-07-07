@@ -65,23 +65,35 @@ export function Reader({
   );
 
   useEffect(() => {
+    let dead = false;
     setContent(null);
     setError(null);
     setEditing(initialEdit);
     setNotice(null);
     setDestName(path.replace(/^inbox\//, ""));
     fetchFile(path)
-      .then((f) => { setContent(f.content); setDraft(f.content); })
-      .catch((e) => setError((e as Error).message));
+      .then((f) => { if (!dead) { setContent(f.content); setDraft(f.content); } })
+      .catch((e) => { if (!dead) setError((e as Error).message); });
+    return () => { dead = true; };
   }, [path, initialEdit]);
 
   const html = useMemo(() => {
     if (content === null) return "";
     const body = content.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "");
-    const escaped = body.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    // Escape only `<`: it's enough to stop raw HTML tags from opening (the DOM
+    // sanitizer is the real gate). Leaving `>` intact lets marked recognize
+    // blockquotes (`> …`), which double-escaping `>` had silently broken.
+    const escaped = body.replace(/</g, "&lt;");
     const withWiki = escaped.replace(
       /\[\[([^\[\]]+)\]\]/g,
-      (_, t: string) => `<a class="wiki" data-wiki="${t.trim()}">${t.trim()}</a>`,
+      (_, t: string) => {
+        const label = t.trim();
+        // `label` can't contain `<` (already escaped) or `[`/`]` (regex class),
+        // but may contain `"`; escape it so it can't break out of the attribute
+        // and inject a foreign href on this trusted-looking wiki anchor.
+        const attr = label.replace(/"/g, "&quot;");
+        return `<a class="wiki" data-wiki="${attr}">${label}</a>`;
+      },
     );
     return sanitize(md.parse(withWiki, { async: false }) as string);
   }, [content]);
@@ -103,8 +115,16 @@ export function Reader({
   }
 
   async function classify() {
-    const name = destName.trim().replace(/\.md$/i, "") + ".md";
-    const target = `${dest}/${name}`;
+    const base = destName.trim().replace(/\.md$/i, "");
+    if (!/^[\w.-]+$/.test(base)) {
+      setNotice("Nom de fichier invalide (lettres, chiffres, . - _ uniquement).");
+      return;
+    }
+    const target = `${dest}/${base}.md`;
+    if (graph.nodes.some((n) => n.path === target)) {
+      setNotice(`"${target}" existe déjà. Choisis un autre nom.`);
+      return;
+    }
     setBusy(true);
     setNotice(null);
     try {

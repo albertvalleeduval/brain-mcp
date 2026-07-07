@@ -1,10 +1,13 @@
-/** Cockpit sidebar v3 — a nav rail, not a dashboard.
+/** Cockpit sidebar v4 — a nav rail, not a dashboard.
  *  Fixed context stays live (search + Maintenant); everything else is a tile
- *  carrying ONE figure (a badge) that routes to its own page for the detail. */
+ *  carrying ONE figure (a badge) that routes to its own page for the detail.
+ *  Collapsed, the sidebar slides down to a 56px icon rail (same custom icon
+ *  set as the tiles); both layers coexist and cross-fade during the slide. */
 
 import type { BrainGraph, HealthReport, Commit } from "./types";
 import type { NavName } from "./router";
 import { parseFocus, parseDeadlines } from "./nowparse";
+import { ThemeSwitch } from "./ThemeSwitch";
 
 function relTime(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime();
@@ -17,12 +20,11 @@ function relTime(iso: string): string {
 
 const DONE = new Set(["done", "closed", "clos", "archived", "archivé", "abandonné", "terminé"]);
 
-/** Panel-left glyph: a framed rail. Reused for collapse + reopen.
- *  Angles vifs, trait 1.5 — pas de coins arrondis. */
+/** Panel-left glyph: a framed rail. Reused for collapse + reopen. */
 export function PanelIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      strokeWidth="1.5" strokeLinecap="square" strokeLinejoin="miter" aria-hidden="true">
+      strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <rect x="3" y="4" width="18" height="16" />
       <line x1="9" y1="4" x2="9" y2="20" />
     </svg>
@@ -105,28 +107,21 @@ const NAV_ICONS: Record<NavName, JSX.Element> = {
   ),
 };
 
-function Tile({
-  name,
-  label,
-  badge,
-  active,
-  urgent,
-  onNav,
-}: {
+interface NavItem {
   name: NavName;
   label: string;
   badge: string;
-  active: boolean;
   urgent?: boolean;
-  onNav: (r: NavName) => void;
-}) {
+}
+
+function Tile({ item, active, onNav }: { item: NavItem; active: boolean; onNav: (r: NavName) => void }) {
   return (
-    <button className={`tile${active ? " on" : ""}`} onClick={() => onNav(name)}>
+    <button className={`tile${active ? " on" : ""}`} onClick={() => onNav(item.name)}>
       <span className="tile-label">
-        <span className="tile-ico">{NAV_ICONS[name]}</span>
-        {label}
+        <span className="tile-ico">{NAV_ICONS[item.name]}</span>
+        {item.label}
       </span>
-      <span className={`tile-badge${urgent ? " urgent" : ""}`}>{badge}</span>
+      <span className={`tile-badge${item.urgent ? " urgent" : ""}`}>{item.badge}</span>
     </button>
   );
 }
@@ -138,9 +133,13 @@ export function Sidebar({
   nowBody,
   search,
   route,
+  collapsed,
   onSearch,
   onNav,
   onCollapse,
+  themeMode,
+  themeResolved,
+  onThemeSet,
 }: {
   graph: BrainGraph;
   health: HealthReport;
@@ -148,9 +147,14 @@ export function Sidebar({
   nowBody: string;
   search: string;
   route: NavName | "file";
+  collapsed: boolean;
   onSearch: (q: string) => void;
   onNav: (r: NavName) => void;
   onCollapse: () => void;
+  /** Mode choisi (auto | light | dark) et thème effectivement affiché. */
+  themeMode: "auto" | "light" | "dark";
+  themeResolved: "light" | "dark";
+  onThemeSet: (m: "auto" | "light" | "dark") => void;
 }) {
   const focus = parseFocus(nowBody);
   const deadlines = parseDeadlines(nowBody, health.generatedOn);
@@ -169,80 +173,101 @@ export function Sidebar({
     .sort()
     .at(-1);
 
+  const items: NavItem[] = [
+    { name: "home", label: "Graph", badge: `${graph.nodes.length} nœuds` },
+    { name: "projets", label: "Projets", badge: `${activeProjects} actif${activeProjects > 1 ? "s" : ""}` },
+    {
+      name: "echeances",
+      label: "Échéances",
+      badge: nextDeadline ? `J-${nextDeadline.daysLeft}` : "—",
+      urgent: nextDeadline?.daysLeft != null && nextDeadline.daysLeft <= 7,
+    },
+    {
+      name: "inbox",
+      label: "Inbox",
+      badge: health.inbox.length ? `${health.inbox.length} en attente` : "vide",
+      urgent: health.inbox.length > 0,
+    },
+    { name: "decisions", label: "Décisions", badge: lastDecision ?? "—" },
+    { name: "journal", label: "Journal", badge: history[0] ? relTime(history[0].date) : "—" },
+    { name: "health", label: "Santé", badge: `${health.score}/100`, urgent: health.score < 70 },
+  ];
+
   return (
-    <aside className="side">
-      <div className="brand">
-        <div className="brand-row">
-          <h1><button className="brand-btn" onClick={() => onNav("home")}>my²brain</button></h1>
-          <button className="side-toggle" onClick={onCollapse} aria-label="Réduire la sidebar" title="Réduire la sidebar">
-            <PanelIcon />
-          </button>
+    <aside className={`side${collapsed ? " mini" : ""}`}>
+      {/* full layer — slides left and fades out when collapsing */}
+      <div className="side-full" aria-hidden={collapsed}>
+        <div className="brand">
+          <div className="brand-row">
+            <h1><button className="brand-btn" onClick={() => onNav("home")}>my²brain</button></h1>
+            <button className="side-toggle" onClick={onCollapse} aria-label="Réduire la sidebar" title="Réduire la sidebar">
+              <PanelIcon />
+            </button>
+          </div>
+          <div className="meta">
+            main · {health.files} fichiers · {graph.edges.length} liens · santé <b>{health.score}/100</b>
+          </div>
         </div>
-        <div className="meta">
-          main · {health.files} fichiers · {graph.edges.length} liens · santé <b>{health.score}/100</b>
+
+        <div className="search">
+          <input
+            type="search"
+            placeholder="rechercher dans le brain…"
+            aria-label="Rechercher"
+            value={search}
+            onChange={(e) => onSearch(e.target.value)}
+          />
+        </div>
+
+        <section className="sec">
+          <div className="eyebrow"><span>Maintenant</span></div>
+          {focus.length > 0 ? (
+            <>
+              <div className="focus-lead">{focus[0]}</div>
+              <div className="focus-rest">
+                {focus.slice(1, 4).map((f, i) => (
+                  <div className="row" key={i}><span className="tick">·</span><span>{f}</span></div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="health"><div className="ok">now.md sans section « Focus courant »</div></div>
+          )}
+        </section>
+
+        <nav className="nav">
+          {items.map((it) => (
+            <Tile key={it.name} item={it} active={route === it.name} onNav={onNav} />
+          ))}
+        </nav>
+
+        <div className="side-foot">
+          {/* Exemplaire permanent du toggle (l'autre vit en overlay sur le
+              graphe) : clic direct = manuel, auto = coucher du soleil. */}
+          <ThemeSwitch mode={themeMode} resolved={themeResolved} onSet={onThemeSet} />
+          <a href="/app/logout">déconnexion</a>
         </div>
       </div>
 
-      <div className="search">
-        <input
-          type="search"
-          placeholder="rechercher dans le brain…"
-          aria-label="Rechercher"
-          value={search}
-          onChange={(e) => onSearch(e.target.value)}
-        />
-      </div>
-
-      <section className="sec">
-        <div className="eyebrow"><span>Maintenant</span></div>
-        {focus.length > 0 ? (
-          <>
-            <div className="focus-lead">{focus[0]}</div>
-            <div className="focus-rest">
-              {focus.slice(1, 4).map((f, i) => (
-                <div className="row" key={i}><span className="tick">·</span><span>{f}</span></div>
-              ))}
-            </div>
-          </>
-        ) : (
-          <div className="health"><div className="ok">now.md sans section « Focus courant »</div></div>
-        )}
-      </section>
-
-      <nav className="nav">
-        <Tile name="home" label="Graph" badge={`${graph.nodes.length} nœuds`} active={route === "home"} onNav={onNav} />
-        <Tile name="projets" label="Projets" badge={`${activeProjects} actif${activeProjects > 1 ? "s" : ""}`} active={route === "projets"} onNav={onNav} />
-        <Tile
-          name="echeances"
-          label="Échéances"
-          badge={nextDeadline ? `J-${nextDeadline.daysLeft}` : "—"}
-          urgent={nextDeadline?.daysLeft != null && nextDeadline.daysLeft <= 7}
-          active={route === "echeances"}
-          onNav={onNav}
-        />
-        <Tile
-          name="inbox"
-          label="Inbox"
-          badge={health.inbox.length ? `${health.inbox.length} en attente` : "vide"}
-          urgent={health.inbox.length > 0}
-          active={route === "inbox"}
-          onNav={onNav}
-        />
-        <Tile name="decisions" label="Décisions" badge={lastDecision ?? "—"} active={route === "decisions"} onNav={onNav} />
-        <Tile name="journal" label="Journal" badge={history[0] ? relTime(history[0].date) : "—"} active={route === "journal"} onNav={onNav} />
-        <Tile
-          name="health"
-          label="Santé"
-          badge={`${health.score}/100`}
-          urgent={health.score < 70}
-          active={route === "health"}
-          onNav={onNav}
-        />
-      </nav>
-
-      <div className="side-foot">
-        <span>direction 1B · grille suisse</span>
-        <a href="/app/logout">déconnexion</a>
+      {/* icon rail — the sidebar's collapsed form */}
+      <div className="side-rail" aria-hidden={!collapsed}>
+        <button className="rail-toggle" onClick={onCollapse} aria-label="Ouvrir la sidebar" title="Ouvrir la sidebar">
+          <PanelIcon />
+        </button>
+        <nav className="rail-nav" aria-label="Navigation">
+          {items.map((it) => (
+            <button
+              key={it.name}
+              className={`rail-btn${route === it.name ? " on" : ""}`}
+              title={`${it.label} · ${it.badge}`}
+              aria-label={it.label}
+              onClick={() => onNav(it.name)}
+            >
+              {NAV_ICONS[it.name]}
+              {it.urgent && <span className="rail-dot" aria-hidden="true" />}
+            </button>
+          ))}
+        </nav>
       </div>
     </aside>
   );

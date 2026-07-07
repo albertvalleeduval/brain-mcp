@@ -3,8 +3,17 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="color-scheme" content="light" />
+    <meta name="color-scheme" content="dark light" />
     <title>my²brain — mock</title>
+    <!-- Harnais : ?theme=light|dark force la peau, sinon localStorage/auto. -->
+    <script>
+      (function () {
+        var q = new URLSearchParams(location.search).get("theme");
+        var m = q === "light" || q === "dark" ? q : localStorage.getItem("theme-mode");
+        document.documentElement.dataset.theme = m === "light" ? "light" : "dark";
+        if (q) localStorage.setItem("theme-mode", q);
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
