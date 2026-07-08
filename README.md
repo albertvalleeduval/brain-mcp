@@ -174,6 +174,12 @@ npx wrangler deploy
 Your MCP endpoint is the printed URL **+ `/mcp`**. If your OAuth App used a
 placeholder host, update its Homepage/callback URLs to the real one now.
 
+> The template ships without branding: add your own `favicon.svg`,
+> `icon-192.png` and `icon-512.png` to `app/public/`, then restore the
+> `<link rel="icon">` tags in `app/index.html` and the `icons` array in
+> `app/public/manifest.webmanifest` (icons are required for the PWA
+> install / share-target experience on mobile).
+
 ### 7. Connect
 
 - **claude.ai** → Settings → **Connectors** → **Add custom connector** → paste
