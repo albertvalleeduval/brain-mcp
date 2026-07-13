@@ -88,6 +88,14 @@ const NAV_ICONS: Record<NavName, JSX.Element> = {
       <path d="M12 3.8l8.2 8.2-8.2 8.2-8.2-8.2z" />
     </svg>
   ),
+  // not-equal: the sign of a contradiction
+  contradictions: (
+    <svg {...ICON_PROPS}>
+      <line x1="5" y1="9.5" x2="19" y2="9.5" />
+      <line x1="5" y1="14.5" x2="19" y2="14.5" />
+      <line x1="16" y1="4.5" x2="8" y2="19.5" />
+    </svg>
+  ),
   // the commit log
   journal: (
     <svg {...ICON_PROPS}>
@@ -173,6 +181,10 @@ export function Sidebar({
     .sort()
     .at(-1);
 
+  const openTensions = graph.nodes.filter(
+    (n) => n.folder === "tensions" && (n.status ?? "").toLowerCase() === "open",
+  ).length;
+
   const items: NavItem[] = [
     { name: "home", label: "Graph", badge: `${graph.nodes.length} nœuds` },
     { name: "projets", label: "Projets", badge: `${activeProjects} actif${activeProjects > 1 ? "s" : ""}` },
@@ -189,6 +201,12 @@ export function Sidebar({
       urgent: health.inbox.length > 0,
     },
     { name: "decisions", label: "Décisions", badge: lastDecision ?? "—" },
+    {
+      name: "contradictions",
+      label: "Contradictions",
+      badge: openTensions ? `${openTensions} ouverte${openTensions > 1 ? "s" : ""}` : "0",
+      urgent: openTensions > 0,
+    },
     { name: "journal", label: "Journal", badge: history[0] ? relTime(history[0].date) : "—" },
     { name: "health", label: "Santé", badge: `${health.score}/100`, urgent: health.score < 70 },
   ];
