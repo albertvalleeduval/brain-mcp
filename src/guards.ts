@@ -29,6 +29,9 @@ const ALLOWED_DIRS = [
   // open → resolved/false-alarm/superseded; a source is never rewritten away).
   "sources/",
   "tensions/",
+  // Ingested AI-chat digests: one curated digest per conversation + the hub
+  // README. Never a raw transcript.
+  "conversations/",
 ];
 
 export function normalizePath(path: string): string {
