@@ -165,6 +165,8 @@ function orphanExempt(path: string): boolean {
     !path.includes("/") || // root files are entry points
     path.startsWith("inbox/") ||
     path.startsWith("decisions/") ||
+    path.startsWith("tensions/") || // a tension points OUT at claims; nothing points at it
+    path.startsWith("sources/") || // a source may exist before a fact cites it
     path.endsWith("_template.md") ||
     path.toLowerCase().endsWith("readme.md")
   );

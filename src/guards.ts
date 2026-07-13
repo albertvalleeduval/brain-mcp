@@ -24,6 +24,11 @@ const ALLOWED_DIRS = [
   "people/",
   "domains/",
   "inbox/",
+  // Coherence layer: retained sources for provenance + the contradictions
+  // ledger. Both editable via upsert (a tension's status flips
+  // open → resolved/false-alarm/superseded; a source is never rewritten away).
+  "sources/",
+  "tensions/",
 ];
 
 export function normalizePath(path: string): string {
