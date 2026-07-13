@@ -18,6 +18,8 @@ export const TYPE_COLORS: Record<string, string> = {
   decisions: "#b38600",
   domains: "#0d9c8b",
   inbox: "#8a8a8a",
+  tensions: "#7c3aed",
+  sources: "#64748b",
 };
 
 export const TYPE_LABELS: Record<string, string> = {
@@ -29,6 +31,8 @@ export const TYPE_LABELS: Record<string, string> = {
   decisions: "décisions",
   domains: "domaines",
   inbox: "inbox",
+  tensions: "contradictions",
+  sources: "sources",
 };
 
 export function typeColor(folder: string): string {

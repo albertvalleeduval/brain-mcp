@@ -20,7 +20,7 @@ export function useLocation(): string {
 }
 
 /** The nav-able destinations: everything reachable from a sidebar tile. */
-export type NavName = "home" | "projets" | "echeances" | "inbox" | "decisions" | "journal" | "health";
+export type NavName = "home" | "projets" | "echeances" | "inbox" | "decisions" | "contradictions" | "journal" | "health";
 
 export type Route = { name: NavName } | { name: "file"; path: string };
 
@@ -31,6 +31,7 @@ export const NAV_PATH: Record<NavName, string> = {
   echeances: "/echeances",
   inbox: "/inbox",
   decisions: "/decisions",
+  contradictions: "/contradictions",
   journal: "/journal",
   health: "/health",
 };

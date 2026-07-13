@@ -10,6 +10,7 @@ import { ProjetsPage } from "./ProjetsPage";
 import { EcheancesPage } from "./EcheancesPage";
 import { InboxPage } from "./InboxPage";
 import { JournalPage } from "./JournalPage";
+import { TensionsPage } from "./TensionsPage";
 import { useLocation, parseRoute, navigate, fileUrl, NAV_PATH } from "./router";
 import type { NavName } from "./router";
 import { useThemeMode } from "./theme";
@@ -214,6 +215,8 @@ export function App() {
           <EcheancesPage nowBody={nowBody} today={health.generatedOn} />
         ) : route.name === "inbox" ? (
           <InboxPage items={health.inbox} onOpen={openFile} onReload={load} />
+        ) : route.name === "contradictions" ? (
+          <TensionsPage graph={graph} onOpen={openFile} />
         ) : route.name === "journal" ? (
           <JournalPage history={history} />
         ) : (
