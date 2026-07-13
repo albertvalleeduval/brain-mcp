@@ -283,6 +283,17 @@ export function Graph({
     // écran ; à zoom normal (k ≥ 0.84) le plancher est inactif.
     const rd = (n: SimNode) => Math.max(n.r, 2.5 / st.k);
 
+    // Contour de survol (reticle HUD) : le disque + un petit gap. Défini ici
+    // pour que les arêtes surlignées partent du BORD du contour, pas du disque
+    // — sinon un bout d'arête passe visiblement sous l'anneau.
+    const HOVER_GAP = 2.5 / st.k;
+    const HOVER_LW = 1.2 / st.k;
+    const ringR = (n: SimNode) => rd(n) + HOVER_GAP;
+    // Rayon de coupe d'une arête à une extrémité : bord extérieur du contour si
+    // le nœud est survolé (l'arête démarre juste hors de l'anneau), bord du
+    // disque sinon.
+    const trimR = (n: SimNode) => (n === hover ? ringR(n) + HOVER_LW / 2 : rd(n));
+
     // edges
     for (const l of st.links) {
       const s = l.source as SimNode, t = l.target as SimNode;
@@ -299,7 +310,7 @@ export function Graph({
       // direction. Si les disques se chevauchent, pas d'arête à tracer.
       const dx = tx2 - sx, dy = ty2 - sy;
       const len = Math.hypot(dx, dy);
-      const sr = rd(s), tr = rd(t);
+      const sr = trimR(s), tr = trimR(t);
       if (len <= sr + tr) continue;
       const ux = dx / len, uy = dy / len;
       ctx.beginPath();
@@ -362,11 +373,13 @@ export function Graph({
       }
       if (isHover) {
         // Ring around the node needs a gap to read: a thin reticle at r+2.5,
-        // like an HUD target lock (blanc en sombre, rouge suisse en clair).
+        // like an HUD target lock (blanc en sombre, rouge suisse en clair). Les
+        // arêtes surlignées démarrent du bord de cet anneau (cf. trimR), jamais
+        // du disque : rien ne passe sous le contour.
         ctx.beginPath();
-        ctx.arc(nx, ny, rd(n) + 2.5 / st.k, 0, Math.PI * 2);
+        ctx.arc(nx, ny, ringR(n), 0, Math.PI * 2);
         ctx.strokeStyle = skin.accent;
-        ctx.lineWidth = 1.2 / st.k;
+        ctx.lineWidth = HOVER_LW;
         ctx.shadowColor = skin.accent;
         ctx.shadowBlur = 8;
         ctx.stroke();
