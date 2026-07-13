@@ -44,6 +44,15 @@ export interface BrainGraph {
 
 const WIKI_LINK = /\[\[([^\[\]]+)\]\]/g;
 
+/**
+ * Wiki-links quoted as notation — inside inline code spans or fenced code
+ * blocks — are examples, not edges (e.g. brain-protocol explaining the
+ * `[[...]]` syntax). Strip code before scanning so they never count.
+ */
+function stripCode(content: string): string {
+  return content.replace(/```[\s\S]*?```/g, "").replace(/`[^`\n]*`/g, "");
+}
+
 /** Parse an inline frontmatter list like `tags: [a, b, c]`. */
 function readTags(frontmatter: string | null): string[] {
   if (!frontmatter) return [];
@@ -111,8 +120,9 @@ export function buildGraph(files: BrainFile[]): BrainGraph {
   const seen = new Set<string>();
 
   for (const f of files) {
-    for (const m of f.content.matchAll(WIKI_LINK)) {
+    for (const m of stripCode(f.content).matchAll(WIKI_LINK)) {
       const raw = m[1].trim();
+      if (!/[a-z0-9]/i.test(raw)) continue; // placeholder like [[...]], notation not a link
       const key = raw.toLowerCase();
       const target = byId.get(key) ?? byStem.get(key);
       if (!target) {
