@@ -100,7 +100,8 @@ export const GRAPH_SKINS: Record<GraphTheme, GraphSkin> = {
     centerHalo: "rgba(17, 17, 17, 0.35)",
     mix: mixTo([255, 255, 255]),
     nodeColor: (folder, center) => (center ? "#111111" : typeColor(folder)),
-    // Print : taille ∝ degré, le centre domine.
-    radius: (deg, center) => 3.5 + Math.sqrt(deg) * 2.2 + (center ? 5 : 0),
+    // Print : taille ∝ degré, le centre domine. Base et pente resserrées
+    // pour que les disques ne mangent pas le graphe.
+    radius: (deg, center) => 2.4 + Math.sqrt(deg) * 1.3 + (center ? 3.5 : 0),
   },
 };
