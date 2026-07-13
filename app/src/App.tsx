@@ -224,10 +224,14 @@ export function App() {
             <div className="graph-wrap">
               <Graph graph={graph} theme={theme} stalePaths={stalePaths} search={search} contentHits={contentHits} density={density} visible={visible} onOpen={openFile} />
               {/* Toggle de thème : uniquement sur la page graphe, en overlay
-                  haut-droite (l'exemplaire permanent vit au pied de la sidebar). */}
-              <div className="graph-theme">
-                <ThemeSwitch mode={themeMode} resolved={theme} onSet={setThemeMode} />
-              </div>
+                  haut-droite. Il s'efface quand une fiche est ouverte — le
+                  Reader occupe ce coin (l'exemplaire permanent vit au pied
+                  de la sidebar). */}
+              {!openPath && (
+                <div className="graph-theme">
+                  <ThemeSwitch mode={themeMode} resolved={theme} onSet={setThemeMode} />
+                </div>
+              )}
             </div>
             {replay && frame && (
               <div className="replay">
