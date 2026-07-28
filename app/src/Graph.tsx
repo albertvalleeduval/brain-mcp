@@ -422,7 +422,9 @@ export function Graph({
         ctx.strokeStyle = skin.accent;
         ctx.lineWidth = HOVER_LW;
         ctx.shadowColor = skin.accent;
-        ctx.shadowBlur = 8;
+        // Même correctif n°2 que le halo central : shadowBlur est en px ÉCRAN,
+        // donc à 8 fixes l'anneau devenait une tache molle au dézoom. ×k.
+        ctx.shadowBlur = 8 * st.k;
         ctx.stroke();
         ctx.shadowBlur = 0;
       }
