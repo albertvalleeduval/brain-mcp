@@ -310,15 +310,36 @@ export function Graph({
     // disque sinon.
     const trimR = (n: SimNode) => (n === hover ? ringR(n) + HOVER_LW / 2 : rd(n));
 
-    // edges
+    // Arêtes : TROIS passes (éteintes, normales, surlignées), UN SEUL stroke()
+    // par passe. C'était la cause de l'« effet corde tressée » : avec un
+    // stroke() par arête, chaque croisement de deux hairlines à 28 %
+    // recomposait l'alpha (0,28 → 0,48 → 0,63…). Dans une sphère dense les
+    // arêtes voyagent en faisceaux quasi parallèles : leurs chevauchements
+    // partiels dessinaient des bandes claires/sombres le long de ce qui se lit
+    // comme un seul fil, exactement le grain d'une corde tressée, et le cumul
+    // sur des centaines d'arêtes voilait tout le graphe. Un seul stroke() par
+    // style rastérise toutes ses arêtes en UN masque de couverture : l'alpha
+    // n'est appliqué qu'une fois, donc la même opacité sur toute la longueur
+    // d'un fil, sur tous les fils, croisements compris.
+    // Aucun ombrage ne doit fuir d'une frame précédente : batché, il baverait
+    // désormais sur toutes les arêtes d'un coup.
+    ctx.shadowBlur = 0;
+    // Largeur en pixels ÉCRAN entiers. `1 / st.k` donnait dpr px de large, soit
+    // 1,5 px sur un écran à 150 % : une hairline de largeur fractionnaire a une
+    // couverture antialiasée qui bat le long du trait (période liée à la pente)
+    // — l'alternance d'opacité vue de près.
+    ctx.lineWidth = Math.max(1, Math.round(dpr)) / (dpr * st.k);
+    const edgePaths: [string, Path2D][] = [
+      [skin.edgeDim, new Path2D()],
+      [skin.edge, new Path2D()],
+      [skin.edgeOn, new Path2D()],
+    ];
     for (const l of st.links) {
       const s = l.source as SimNode, t = l.target as SimNode;
       if (s.x == null || t.x == null) continue;
       if (visible && !(visible.has(s.path) && visible.has(t.path))) continue;
       const on = hover && (s === hover || t === hover);
       const dimmed = (hover && !on) || (searching && !(s.match && t.match));
-      ctx.strokeStyle = on ? skin.edgeOn : dimmed ? skin.edgeDim : skin.edge;
-      ctx.lineWidth = 1 / st.k;
       const [sx, sy] = wob(st, s);
       const [tx2, ty2] = wob(st, t);
       // L'arête s'arrête au BORD des deux disques, jamais dans le nœud :
@@ -329,10 +350,14 @@ export function Graph({
       const sr = trimR(s), tr = trimR(t);
       if (len <= sr + tr) continue;
       const ux = dx / len, uy = dy / len;
-      ctx.beginPath();
-      ctx.moveTo(sx + ux * sr, sy + uy * sr);
-      ctx.lineTo(tx2 - ux * tr, ty2 - uy * tr);
-      ctx.stroke();
+      // Éteintes dessous, surlignées dessus : l'ordre des passes fait le z.
+      const path = edgePaths[on ? 2 : dimmed ? 0 : 1][1];
+      path.moveTo(sx + ux * sr, sy + uy * sr);
+      path.lineTo(tx2 - ux * tr, ty2 - uy * tr);
+    }
+    for (const [style, path] of edgePaths) {
+      ctx.strokeStyle = style;
+      ctx.stroke(path);
     }
 
     // labels fade in with zoom; hover always shows its neighborhood.
