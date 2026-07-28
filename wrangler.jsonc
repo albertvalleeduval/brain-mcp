@@ -34,7 +34,7 @@
     // GitHub login that owns the brain repo.
     "BRAIN_OWNER": "your-github-login",
     // Name of your private markdown repo.
-    "BRAIN_REPO": "my-brain",
+    "BRAIN_REPO": "your-brain-repo",
     "BRAIN_BRANCH": "main",
     // The ONLY GitHub login allowed to authenticate (usually = BRAIN_OWNER).
     "ALLOWED_LOGIN": "your-github-login",

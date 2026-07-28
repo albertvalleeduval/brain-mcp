@@ -69,7 +69,7 @@ Two credentials, two jobs, never mixed:
 
 ## The brain repo
 
-Create a **separate, private** repo (e.g. `my-brain`) holding plain markdown.
+Create a **separate, private** repo (e.g. `your-brain-repo`) holding plain markdown.
 The layout the tools expect:
 
 ```
@@ -121,7 +121,7 @@ Edit the `vars` block in `wrangler.jsonc`:
 | Var | What it is |
 |---|---|
 | `BRAIN_OWNER` | GitHub login that owns the brain repo |
-| `BRAIN_REPO` | Brain repo name (e.g. `my-brain`) |
+| `BRAIN_REPO` | Brain repo name (e.g. `your-brain-repo`) |
 | `BRAIN_BRANCH` | Branch to read/write (`main`) |
 | `ALLOWED_LOGIN` | The **only** GitHub login allowed to authenticate |
 | `TIMEZONE` | IANA timezone for date stamps (e.g. `Europe/Paris`) |
