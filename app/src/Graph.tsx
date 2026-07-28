@@ -155,9 +155,25 @@ export function Graph({
       };
     });
     const byPath = new Map(st.nodes.map((n) => [n.path, n]));
-    st.links = graph.edges
-      .filter((e) => byPath.has(e.source) && byPath.has(e.target))
-      .map((e) => ({ source: e.source, target: e.target }));
+    // Une arête est un TRAIT, pas une direction. Le dédoublonnage du Worker est
+    // dirigé (`source→target`, à raison : in/outDegree et les orphelins en
+    // dépendent), donc un lien réciproque — [[A]] cité dans B ET [[B]] cité
+    // dans A — arrivait ici en DEUX arêtes sur le même segment. Tracé deux
+    // fois, un fil à 28 % d'alpha monte à 48 % : d'où des fils visiblement plus
+    // clairs que d'autres (un tiers des traits, sur un brain réel). On garde
+    // une arête par paire non ordonnée ; `deg` reste sur les degrés dirigés.
+    const drawn = new Set<string>();
+    st.links = [];
+    for (const e of graph.edges) {
+      if (!byPath.has(e.source) || !byPath.has(e.target)) continue;
+      // Séparateur `|` : illégal dans un chemin, donc la clé d'une paire non
+      // ordonnée ne peut pas en heurter une autre (un espace, si : des dossiers
+      // du brain en contiennent).
+      const key = e.source < e.target ? `${e.source}|${e.target}` : `${e.target}|${e.source}`;
+      if (drawn.has(key)) continue;
+      drawn.add(key);
+      st.links.push({ source: e.source, target: e.target });
+    }
 
     const rect = canvas.getBoundingClientRect();
     const w = rect.width, h = rect.height;
