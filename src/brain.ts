@@ -293,23 +293,29 @@ export async function listTreesAtCommits(
 /* ---------- writes ---------- */
 
 /**
- * Create or update a file. If `expectedSha` is undefined we look up the
- * current sha first (update) and tolerate 404 (create). GitHub requires the
- * current sha to overwrite an existing file.
+ * Create or update a file (GitHub needs the current sha to overwrite).
+ *
+ * The optional `expectedSha` is an optimistic-concurrency expectation:
+ * a string pins the version the caller read, null means "must not exist
+ * yet", undefined means "no expectation, fetch the sha here". Callers that
+ * read-then-write should pin their read — otherwise a concurrent commit
+ * landing in the gap is overwritten without any 409.
  */
 export async function putFile(
   token: string,
   path: string,
   content: string,
   message: string,
+  expectedSha?: string | null,
 ): Promise<{ created: boolean; commitSha: string }> {
-  const existing = await getFile(token, path);
+  const sha =
+    expectedSha === undefined ? ((await getFile(token, path))?.sha ?? null) : expectedSha;
   const body: Record<string, unknown> = {
     message,
     content: toBase64(content),
     branch: cfg().branch,
   };
-  if (existing) body.sha = existing.sha;
+  if (sha) body.sha = sha;
 
   const res = await gh(
     token,
@@ -318,7 +324,10 @@ export async function putFile(
     body,
   );
 
-  if (res.status === 409) {
+  // GitHub answers 409 to a stale sha, and 422 when a create hits an existing
+  // file. With an expectation in play both are the same event — the caller's
+  // read is outdated — so surface one status to retry on.
+  if (res.status === 409 || (expectedSha !== undefined && res.status === 422)) {
     throw new GitHubError(
       409,
       `Write conflict on "${path}" (the file changed under me). Retry.`,
@@ -331,7 +340,7 @@ export async function putFile(
     throw new GitHubError(res.status, `Write failed for "${path}" (${res.status}). ${detail}`);
   }
   const data = (await res.json()) as { commit: { sha: string } };
-  return { created: !existing, commitSha: data.commit.sha };
+  return { created: !sha, commitSha: data.commit.sha };
 }
 
 /** Delete a file (requires its current sha, like any GitHub contents write). */

@@ -35,7 +35,9 @@ export async function stageToInbox(
     throw new GitHubError(409, `"${path}" already exists. inbox is append-safe only; pick another name.`);
   }
 
-  const res = await putFile(token, path, content, `inbox: add ${name}`);
+  // Create-only expectation: should the name get taken right after the check
+  // above, the write 409s rather than clobbering the other note.
+  const res = await putFile(token, path, content, `inbox: add ${name}`, null);
   return { path, commitSha: res.commitSha };
 }
 
@@ -98,7 +100,7 @@ export async function updateNow(
   if (summary_l1 !== undefined) fm = setFrontmatterKey(fm, "summary_l1", summary_l1);
   const newContent = buildFrontmatter(fm, content.trim() + "\n");
 
-  const res = await putFile(token, "now.md", newContent, `now: update ${today()}`);
+  const res = await putFile(token, "now.md", newContent, `now: update ${today()}`, existing ? existing.sha : null);
   return { path: "now.md", commitSha: res.commitSha, created: res.created };
 }
 
@@ -123,6 +125,6 @@ export async function appendDecision(
     newContent = `${fm}${entry}`;
   }
 
-  const res = await putFile(token, path, newContent, `decision: ${today()}`);
+  const res = await putFile(token, path, newContent, `decision: ${today()}`, existing ? existing.sha : null);
   return { path, commitSha: res.commitSha, created: res.created };
 }
