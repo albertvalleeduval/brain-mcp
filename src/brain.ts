@@ -147,50 +147,62 @@ function cacheBlob(sha: string, content: string): void {
  */
 const GRAPHQL_BATCH = 100;
 
+async function fetchBlobBatch(
+  token: string,
+  batch: { path: string; sha: string }[],
+): Promise<void> {
+  const fields = batch
+    .map(
+      (e, j) =>
+        `f${j}: object(expression: ${JSON.stringify(`${cfg().branch}:${e.path}`)}) { ... on Blob { text } }`,
+    )
+    .join("\n");
+  const query = `query { repository(owner: ${JSON.stringify(cfg().owner)}, name: ${JSON.stringify(cfg().repo)}) {\n${fields}\n} }`;
+
+  const res = await fetch(`${API}/graphql`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      "User-Agent": "brain-mcp",
+    },
+    body: JSON.stringify({ query }),
+  });
+  const rl = rateLimitMessage(res);
+  if (rl) throw new GitHubError(403, rl);
+  if (!res.ok) {
+    throw new GitHubError(res.status, `Could not read brain files (GraphQL ${res.status}).`);
+  }
+  const data = (await res.json()) as {
+    data?: { repository?: Record<string, { text: string | null } | null> };
+    errors?: { message: string }[];
+  };
+  const repo = data.data?.repository;
+  if (!repo) {
+    throw new GitHubError(
+      502,
+      `Could not read brain files: ${data.errors?.[0]?.message ?? "empty GraphQL response"}.`,
+    );
+  }
+  batch.forEach((e, j) => {
+    // text is null only for binary blobs; we filter to .md so treat as empty.
+    cacheBlob(e.sha, repo[`f${j}`]?.text ?? "");
+  });
+}
+
 async function fetchBlobs(
   token: string,
   entries: { path: string; sha: string }[],
 ): Promise<void> {
+  // Lots lancés en parallèle et non enchaînés : au-delà de 100 fichiers, la
+  // boucle séquentielle additionnait les latences GraphQL sur le chemin
+  // critique du boot. Quelques lots concurrents restent loin du plafond de
+  // subrequests.
+  const batches: { path: string; sha: string }[][] = [];
   for (let i = 0; i < entries.length; i += GRAPHQL_BATCH) {
-    const batch = entries.slice(i, i + GRAPHQL_BATCH);
-    const fields = batch
-      .map(
-        (e, j) =>
-          `f${j}: object(expression: ${JSON.stringify(`${cfg().branch}:${e.path}`)}) { ... on Blob { text } }`,
-      )
-      .join("\n");
-    const query = `query { repository(owner: ${JSON.stringify(cfg().owner)}, name: ${JSON.stringify(cfg().repo)}) {\n${fields}\n} }`;
-
-    const res = await fetch(`${API}/graphql`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-        "User-Agent": "brain-mcp",
-      },
-      body: JSON.stringify({ query }),
-    });
-    const rl = rateLimitMessage(res);
-    if (rl) throw new GitHubError(403, rl);
-    if (!res.ok) {
-      throw new GitHubError(res.status, `Could not read brain files (GraphQL ${res.status}).`);
-    }
-    const data = (await res.json()) as {
-      data?: { repository?: Record<string, { text: string | null } | null> };
-      errors?: { message: string }[];
-    };
-    const repo = data.data?.repository;
-    if (!repo) {
-      throw new GitHubError(
-        502,
-        `Could not read brain files: ${data.errors?.[0]?.message ?? "empty GraphQL response"}.`,
-      );
-    }
-    batch.forEach((e, j) => {
-      // text is null only for binary blobs; we filter to .md so treat as empty.
-      cacheBlob(e.sha, repo[`f${j}`]?.text ?? "");
-    });
+    batches.push(entries.slice(i, i + GRAPHQL_BATCH));
   }
+  await Promise.all(batches.map((b) => fetchBlobBatch(token, b)));
 }
 
 /** All markdown files with content. Used by list_brain + search_brain. */
