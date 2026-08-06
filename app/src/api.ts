@@ -11,6 +11,16 @@ async function get<T>(url: string): Promise<T> {
   return (await res.json()) as T;
 }
 
+/** Le payload de démarrage complet, en une requête (le Worker ne lit le brain
+ *  qu'une fois — voir /api/boot côté serveur). */
+export interface BootPayload {
+  graph: BrainGraph;
+  health: HealthReport;
+  history: Commit[];
+  nowBody: string;
+}
+export const fetchBoot = () => get<BootPayload>("/api/boot");
+
 export const fetchGraph = () => get<BrainGraph>("/api/graph");
 export const fetchHealth = () => get<HealthReport>("/api/health");
 export const fetchHistory = () => get<Commit[]>("/api/history");

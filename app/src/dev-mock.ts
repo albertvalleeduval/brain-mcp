@@ -115,6 +115,7 @@ const nowBody = `## Focus courant
 `;
 
 const routes: Record<string, unknown> = {
+  "/api/boot": { graph, health, history: commits, nowBody },
   "/api/graph": graph,
   "/api/health": health,
   "/api/history": commits,

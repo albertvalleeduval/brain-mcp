@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { fetchGraph, fetchHealth, fetchHistory, fetchFile, fetchReplay, fetchSearch, saveFile, Unauthorized } from "./api";
+import { fetchBoot, fetchReplay, fetchSearch, saveFile, Unauthorized } from "./api";
 import type { BrainGraph, HealthReport, Commit, ReplayFrame } from "./types";
 import { Sidebar } from "./Sidebar";
 import { Graph, type LabelDensity } from "./Graph";
@@ -84,12 +84,10 @@ export function App() {
 
   const load = useCallback(async () => {
     try {
-      const [rawGraph, health, history, now] = await Promise.all([
-        fetchGraph(),
-        fetchHealth(),
-        fetchHistory().catch(() => [] as Commit[]),
-        fetchFile("now.md").catch(() => ({ path: "now.md", content: "" })),
-      ]);
+      // Une seule requête : le Worker ne lit le brain qu'une fois (l'ancien
+      // Promise.all de 4 appels le faisait télécharger deux fois par /graph
+      // et /health, à froid). L'historique arrive dedans, déjà non bloquant.
+      const { graph: rawGraph, health, history, nowBody } = await fetchBoot();
       // Drop `_`-prefixed meta/template files (e.g. projects/_template.md): they
       // have no real links, so the layout flings them to the sphere's edge as
       // stray outliers. They aren't knowledge, they're scaffolding.
@@ -99,7 +97,7 @@ export function App() {
         nodes: rawGraph.nodes.filter((n) => !isTemplate(n.path)),
         edges: rawGraph.edges.filter((e) => !isTemplate(e.source) && !isTemplate(e.target)),
       };
-      setBoot({ s: "ready", graph, health, history, nowBody: now.content });
+      setBoot({ s: "ready", graph, health, history, nowBody });
     } catch (e) {
       if (e instanceof Unauthorized) setBoot({ s: "unauthorized" });
       else setBoot({ s: "error", msg: (e as Error).message });

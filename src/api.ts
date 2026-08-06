@@ -5,6 +5,7 @@
  *   GET  /app/logout
  *   GET  /app         -> placeholder until the UI ships (phase 3)
  *   GET  /api/me      -> {login}
+ *   GET  /api/boot    -> {graph, health, history, nowBody} en 1 requête
  *   GET  /api/graph   -> BrainGraph JSON (nodes, edges, brokenLinks)
  *   GET  /api/health  -> HealthReport JSON
  *   GET  /api/file    -> ?path=now.md -> {path, content}
@@ -133,6 +134,33 @@ browserApp.use("/api/*", async (c, next) => {
 });
 
 browserApp.get("/api/me", async (c) => c.json({ login: cfg().allowedLogin }));
+
+/**
+ * Tout ce que le premier rendu de l'app demande, en UNE requête.
+ *
+ * L'ancien boot appelait /api/graph et /api/health en parallèle : sur un
+ * isolate froid, le blobCache étant vide pour les deux, le contenu intégral
+ * du brain était téléchargé DEUX fois depuis GitHub et le graphe reconstruit
+ * deux fois. Ici getAllFiles ne tourne qu'une fois ; buildHealth est pur sur
+ * le graphe, et now.md est déjà dans le même jeu de fichiers, donc il ne
+ * coûte aucun aller-retour de plus. Seul listCommits (l'historique) reste un
+ * appel REST distinct, lancé en parallèle et non bloquant.
+ */
+browserApp.get("/api/boot", async (c) => {
+  const [files, history] = await Promise.all([
+    getAllFiles(c.env.GITHUB_BRAIN_TOKEN),
+    // L'historique est du confort (replay, journal) : son échec ne doit pas
+    // empêcher le brain de s'afficher.
+    listCommits(c.env.GITHUB_BRAIN_TOKEN).catch(() => []),
+  ]);
+  const graph = buildGraph(files);
+  return c.json({
+    graph: { ...graph, centerPath: cfg().centerPath || null },
+    health: buildHealth(graph, todayLocal()),
+    history,
+    nowBody: files.find((f) => f.path === "now.md")?.content ?? "",
+  });
+});
 
 browserApp.get("/api/graph", async (c) => {
   const graph = buildGraph(await getAllFiles(c.env.GITHUB_BRAIN_TOKEN));
