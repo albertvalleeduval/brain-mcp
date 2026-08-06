@@ -136,29 +136,76 @@ browserApp.use("/api/*", async (c, next) => {
 browserApp.get("/api/me", async (c) => c.json({ login: cfg().allowedLogin }));
 
 /**
- * Tout ce que le premier rendu de l'app demande, en UNE requête.
+ * Tout ce que le premier rendu de l'app demande, en UNE requête, servie
+ * depuis un cache KV tant que le repo n'a pas bougé.
  *
- * L'ancien boot appelait /api/graph et /api/health en parallèle : sur un
- * isolate froid, le blobCache étant vide pour les deux, le contenu intégral
- * du brain était téléchargé DEUX fois depuis GitHub et le graphe reconstruit
- * deux fois. Ici getAllFiles ne tourne qu'une fois ; buildHealth est pur sur
- * le graphe, et now.md est déjà dans le même jeu de fichiers, donc il ne
- * coûte aucun aller-retour de plus. Seul listCommits (l'historique) reste un
- * appel REST distinct, lancé en parallèle et non bloquant.
+ * Le blobCache en mémoire ne survit pas à l'éviction de l'isolate (quelques
+ * minutes d'inactivité suffisent), donc chaque visite espacée repayait
+ * l'intégralité du fetch GitHub : c'était ça, les secondes de « chargement
+ * du brain… ». Le cache est donc déplacé là où il survit : KV, clé unique,
+ * invalidé par le sha de tête. listCommits — qu'il faut de toute façon pour
+ * l'historique — donne ce sha pour un seul appel REST bon marché : si la
+ * tête n'a pas changé, on sert le payload stocké sans toucher aux blobs.
+ *
+ * Deux choix délibérés :
+ * - La santé n'est PAS cachée : buildHealth est pur et instantané, mais il
+ *   dépend de la date du jour — un rapport stocké hier compterait mal les
+ *   fichiers périmés. On cache le graphe, on recalcule la santé à la requête.
+ * - Pas de stale-while-revalidate : servir un état d'avant-écriture juste
+ *   après une capture reviendrait à défaire le geste à l'écran. Après un
+ *   push, le premier chargement repaye donc le fetch complet, et remplit le
+ *   cache pour tous les suivants.
  */
+const BOOT_CACHE_KEY = "bootcache:v1";
+
+interface BootCache {
+  head: string;
+  graph: ReturnType<typeof buildGraph> & { centerPath: string | null };
+  nowBody: string;
+}
+
 browserApp.get("/api/boot", async (c) => {
-  const [files, history] = await Promise.all([
-    getAllFiles(c.env.GITHUB_BRAIN_TOKEN),
-    // L'historique est du confort (replay, journal) : son échec ne doit pas
-    // empêcher le brain de s'afficher.
+  // L'historique est du confort (replay, journal) : son échec ne doit pas
+  // empêcher le brain de s'afficher — mais sans lui, pas de sha de tête,
+  // donc pas de cache non plus.
+  const [history, cachedRaw] = await Promise.all([
     listCommits(c.env.GITHUB_BRAIN_TOKEN).catch(() => []),
+    c.env.OAUTH_KV.get(BOOT_CACHE_KEY),
   ]);
-  const graph = buildGraph(files);
+  const head = history[0]?.sha ?? null;
+
+  if (head && cachedRaw) {
+    try {
+      const cached = JSON.parse(cachedRaw) as BootCache;
+      if (cached.head === head) {
+        return c.json({
+          graph: cached.graph,
+          health: buildHealth(cached.graph, todayLocal()),
+          history,
+          nowBody: cached.nowBody,
+        });
+      }
+    } catch {
+      /* cache illisible → on reconstruit */
+    }
+  }
+
+  const files = await getAllFiles(c.env.GITHUB_BRAIN_TOKEN);
+  const graph = { ...buildGraph(files), centerPath: cfg().centerPath || null };
+  const nowBody = files.find((f) => f.path === "now.md")?.content ?? "";
+
+  if (head) {
+    const entry: BootCache = { head, graph, nowBody };
+    // Hors du chemin de réponse : l'écriture KV ne doit pas coûter une
+    // milliseconde au chargement qui vient déjà de payer le fetch complet.
+    c.executionCtx.waitUntil(c.env.OAUTH_KV.put(BOOT_CACHE_KEY, JSON.stringify(entry)));
+  }
+
   return c.json({
-    graph: { ...graph, centerPath: cfg().centerPath || null },
+    graph,
     health: buildHealth(graph, todayLocal()),
     history,
-    nowBody: files.find((f) => f.path === "now.md")?.content ?? "",
+    nowBody,
   });
 });
 
