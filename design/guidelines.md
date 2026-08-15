@@ -1,54 +1,107 @@
-# my²brain — design guidelines
+# my²brain — design guidelines ("Atelier")
 
-Two themes, one anatomy. Every visual delta between them lives in the CSS
-tokens (`app/src/styles.css`, the `:root` blocks) and in the graph skins
-(`app/src/palette.ts` → `GRAPH_SKINS`) — components never hardcode colors.
-The theme switch (light | auto | dark) is a segmented control; **auto**
-follows sunset/sunrise for the configured location (`app/src/theme.ts`).
+Replaces the earlier "Q Branch" direction (pure black, sharp angles, Chakra
+Petch, actions as underlined text), dropped for a simple reason: it was hard
+to read and unpleasant to live in every day. The exact tokens live in the
+`:root` blocks of `app/src/styles.css`; the graph skins in
+`app/src/palette.ts`. This document fixes the rules of use: every screen must
+be justifiable by them.
 
-## Dark — "observatory" (default)
+## Spirit
 
-An analysis screen, not a SaaS dashboard. Pure black paper, off-white ink,
-neutral greys, a faint white coordinate grid (minor 24px, major 120px) behind
-the graph. Zero hue: the only pigment is a cold console-error red (`--warn`),
-reserved for errors and urgency. Interaction re-inks in pure white
-(`--accent`), never a tint.
+A workshop: sober, legible, pleasant to open daily. Legibility beats
+signature. The interface doesn't try to impress, it tries not to tire.
 
-Graph: uniform tiny grey discs (r = 3, size encodes nothing), opacity carries
-freshness (premixed toward black — discs stay opaque and mask edges), the
-central "me" node is pure white with a slow breathing halo. Labels mono
-uppercase under the node, dark halo. Nodes micro-drift ~3px on two superposed
-sines (killed by prefers-reduced-motion).
+**Stacked surfaces, not rules.** Four levels, from the back to the front:
+`--paper` (the room), `--panel` (sidebar, reader), `--card` (content), `--ctl`
+(buttons, fields, chips). An element stands out because it sits higher, not
+because it was ringed with a thicker line.
 
-## Light — "Swiss grid"
+**The glaze.** Every interactive surface carries `--glaze`: a vertical
+gradient from white at 5.5% down to zero. Light always falls from above. This
+is what gives buttons their relief without any gradient being visible as such.
+A glaze must never read as an effect: if you notice it, it's too strong.
 
-A printed artifact. White paper, near-black ink, 1px rules, one Swiss red
-(`--accent` = `--warn` = #e2231a) for interaction AND urgency. No background
-grid — the grid is the dark mode's signature.
+**Generous, constant radii.** `--r-lg` (14px) for cards, `--r-md` (10px) for
+controls and fields, `--r-sm`/`--r-xs` for small elements, `--r-pill` for
+segments, chips and badges. A sharp corner is a mistake, not a variant.
 
-Graph: same mechanics (sphere layout, drift, edge trimming), different skin —
-node color = file type (categorical print palette in `TYPE_COLORS`), node
-size ∝ degree, freshness premixed toward white, red reticle on hover. The
-legend shows the color swatches only in this theme.
+**Soft, short shadows.** `--sh-1` seats a control, `--sh-2` lifts a card,
+`--sh-pop` is for the floating reader and for hovering a clickable card. Never
+a colored shadow, never a decorative halo.
 
-## Shared language
+## Color is semantic and rare
 
-- **Chakra Petch** is the human voice (titles, navigation, reading); **IBM
-  Plex Mono** is the machine voice (dates, counters, paths, code, graph
-  labels — `tabular-nums` wherever digits align). Light weights: 400 default,
-  never 700+.
-- **The disc replaces the square.** Alert dots, replay thumb, badges — all
-  discs, the graph's node vocabulary.
-- Actions are bare underlined text (no pills, no boxed uppercase buttons).
-- Cards are flat panels ringed by a 1px rule; state lives in the content
-  (red dates for urgent, opacity for done/past), never in ornaments.
-- Data-truth: every figure shown must come from a real API route. No
-  decorative metrics.
+The interface is neutral. A color that appears means something:
 
-## Forbidden (AI-slop markers)
+- **Blue (`--accent`)**: selection and interaction. The active nav tab, a
+  selected chip, a link, the focus ring, the primary action. The standard
+  pattern for a selected state is `--accent-soft` fill + `--accent-line` rule
+  + `--accent` text.
+- **Green (`--ok`)**: a healthy or completed state (active project, done item).
+- **Amber (`--amber`)**: attention, without urgency.
+- **Red (`--warn`)**: urgency and destruction. Overdue dates, late counters,
+  deletion. Nothing else.
 
-Em-dashes anywhere in the interface (rendered as a middot). Floating cards,
-gradients, glassmorphism, purple, rounded corners, drop shadows, emojis,
-centered heroes, colored pill badges, decorative noise. When in doubt:
-could it be printed in a 1972 Swiss report (light) or shown on a mission
-screen (dark)?
+Everything else lives on the neutral scale `--f0` → `--f4`. A color added to
+"brighten things up" is a fault.
+
+## Typography
+
+- **Inter** is the human voice: titles, navigation, labels, reading. Base
+  14px, line-height 1.55, very slightly negative tracking. Useful weights: 450
+  (text), 500 (labels), 600 (titles and eyebrows).
+- **JetBrains Mono** is the machine voice: dates, counters, paths, code, graph
+  labels. Always `tabular-nums` wherever digits align.
+- Eyebrows (`.eyebrow`) are uppercase, 10.5px, 0.09em tracking. A sentence
+  slipped into an eyebrow (`.hint`) keeps normal case.
+
+Both faces are self-hosted in `app/public/` (`inter-latin*.woff2`,
+`jbmono-latin*.woff2`), latin and latin-ext subsets, and the two latin ones
+are preloaded in `app/index.html`.
+
+## Anatomy
+
+- **Nav**: one rounded row per destination, filled on hover, diluted blue when
+  active. No horizontal separators.
+- **Cards**: `--card` + glaze + rule + `--r-lg` + `--sh-2`. On hover the rule
+  rises to `--rule-hi`; a clickable card lifts by 2px.
+- **Buttons** (`.box`): `--ctl` surface, glaze, rule, `--r-md`. Variants:
+  `.ghost` (no surface), `.danger` (red), `.primary` (solid blue). At most one
+  solid action per screen.
+- **Focus**: never a default `outline`, always `box-shadow: var(--ring)`, a
+  3px blue ring. No interactive element may be keyboard-reachable without a
+  visible ring.
+- **Reader**: a floating panel, 10px off the edges, `--r-xl`, `--sh-pop`. A
+  file laid over the room, not a drawer built into it.
+- **Background**: a very faint dot grid (26px), behind the graph and the pages
+  only. No more line grid.
+- **The disc stays** for alert markers and dots: it's the graph's vocabulary,
+  and it survives the redesign.
+
+## Two themes, one anatomy
+
+The whole delta between light and dark lives in the tokens. No component
+hardcodes a color. Dark is the default (`--paper: #08080a`, never pure black:
+pure black crushes the shadows and makes the stack invisible). Light flips the
+scale (very pale grey paper, white cards) so the stack stays readable without
+multiplying rules. The light | auto | dark switch is a pill segmented control;
+**auto** follows sunset and sunrise for the configured location
+(`app/src/theme.ts`).
+
+The graph canvas must paint exactly the theme's `--paper`
+(`palette.ts` → `GRAPH_SKINS[...].paperCss`), otherwise the graph floats on a
+plate of a different value than the room.
+
+## Motion
+
+140ms transitions on color, background, rule, shadow and transform. The
+central node's glow breathes, nodes drift by a few pixels. Everything must
+switch off cleanly under `prefers-reduced-motion` without anything breaking.
+
+## Forbidden
+
+Purple and hue gradients (the glaze is achromatic). Colored shadows. Frosted
+glass over content. Decorative icons, emojis, centered heroes. Noise or
+decorative texture. A color that encodes no state. A figure on screen that
+doesn't come from a real `/api` route: data is either true or absent.
