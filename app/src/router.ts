@@ -22,7 +22,10 @@ export function useLocation(): string {
 /** The nav-able destinations: everything reachable from a sidebar tile. */
 export type NavName = "home" | "projets" | "echeances" | "inbox" | "decisions" | "contradictions" | "journal" | "health";
 
-export type Route = { name: NavName } | { name: "file"; path: string };
+/** `capture` is deliberately NOT a NavName: it's the phone's standalone capture
+ *  surface, reached from the home-screen shortcut, and it renders without the
+ *  sidebar and without waiting for the graph to load. */
+export type Route = { name: NavName } | { name: "file"; path: string } | { name: "capture" };
 
 /** One source of truth for nav-name ↔ URL, used by both parseRoute and the sidebar. */
 export const NAV_PATH: Record<NavName, string> = {
@@ -44,6 +47,7 @@ export function parseRoute(pathname: string): Route {
     // Malformed %-escape (e.g. a bad deep link) — don't crash the whole app.
     return { name: "home" };
   }
+  if (p === "/capture") return { name: "capture" };
   if (p.startsWith("/fichier/")) return { name: "file", path: p.slice("/fichier/".length) };
   const hit = (Object.keys(NAV_PATH) as NavName[]).find((n) => NAV_PATH[n] === p);
   return { name: hit ?? "home" };

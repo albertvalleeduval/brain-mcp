@@ -4,6 +4,16 @@ import type { BrainGraph, HealthReport, Commit, ReplayFrame } from "./types";
 
 export class Unauthorized extends Error {}
 
+/** Non-401 HTTP failure, status attached: lets callers tell a permanent
+ *  refusal (4xx — retrying is pointless) from a transient one (5xx). */
+export class HttpError extends Error {
+  status: number;
+  constructor(status: number, message: string) {
+    super(message);
+    this.status = status;
+  }
+}
+
 async function get<T>(url: string): Promise<T> {
   const res = await fetch(url);
   if (res.status === 401) throw new Unauthorized();
@@ -47,7 +57,7 @@ async function send<T>(url: string, method: string, body: unknown): Promise<T> {
   } catch {
     /* non-JSON body */
   }
-  if (!res.ok) throw new Error(data?.error ?? `${url} → ${res.status}`);
+  if (!res.ok) throw new HttpError(res.status, data?.error ?? `${url} → ${res.status}`);
   if (!data) throw new Error(`${url} → réponse invalide`);
   return data;
 }
@@ -67,6 +77,12 @@ export const saveNow = (content: string, summary_l0?: string, summary_l1?: strin
 /** Append a dated decision entry. */
 export const appendDecision = (text: string) =>
   send<{ path: string }>("/api/decision", "POST", { text });
+
+/** Append one raw idea to today's inbox day-file. Dumb capture, no LLM.
+ *  `kind` is an optional pre-assignment: "todo" | "reflexion" | "projet"
+ *  | "question". */
+export const captureIdea = (text: string, kind?: string) =>
+  send<{ path: string; line: string }>("/api/capture", "POST", { text, kind });
 
 /** Delete a processed inbox item. */
 export const deleteInbox = (filename: string) =>

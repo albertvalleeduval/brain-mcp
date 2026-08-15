@@ -131,6 +131,11 @@ window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
     return new Response(JSON.stringify({ path: "now.md", content: nowBody }), { status: 200 });
   }
   if (path === "/api/search") return new Response(JSON.stringify({ paths: [] }), { status: 200 });
+  // La capture accepte tout : sans ce stub, /mock.html?route=/capture voit un
+  // 404 et affiche un refus définitif au lieu de la page au repos.
+  if (path === "/api/capture") {
+    return new Response(JSON.stringify({ path: "inbox/idees-" + today + ".md", line: "- 00:00 mock" }), { status: 200 });
+  }
   return realFetch(input as RequestInfo, init);
 };
 

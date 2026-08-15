@@ -849,3 +849,100 @@ button.eb-nav:focus-visible { outline: none; box-shadow: var(--ring); }
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
+/* ═══ Capture — la surface du téléphone ═══════════════════════════════════ */
+
+/* Épinglée sur la zone visible (voir CapturePage : --cap-h vient de
+   visualViewport, donc clavier déduit). position: fixed pour que l'ouverture
+   du clavier ne fasse jamais défiler le bouton d'envoi hors de l'écran. */
+.capture {
+  position: fixed; left: 0; right: 0;
+  top: var(--cap-top, 0px);
+  height: var(--cap-h, 100dvh);
+  display: flex; flex-direction: column;
+  max-width: 620px; margin-inline: auto;
+  padding: 14px 14px calc(12px + env(safe-area-inset-bottom));
+  background: var(--paper);
+  box-sizing: border-box;
+  overflow: hidden;
+}
+/* L'en-tête entier est le lien vers le cockpit, mais sans texte de lien :
+   largeur ajustée au contenu pour qu'un tap à côté ne quitte pas la page. */
+.capture-head {
+  flex: none;
+  display: inline-flex; align-items: center; gap: 7px;
+  align-self: flex-start; margin-bottom: 10px;
+  color: var(--accent); text-decoration: none;
+}
+.capture-head svg { width: 19px; height: 19px; flex: none; }
+.capture-title {
+  font-family: var(--ui); font-size: 11px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent);
+}
+
+/* flex: 1 avec min-height quasi nul : le champ cède l'espace au clavier plutôt
+   que de pousser les boutons dehors. min-height: 0 est nécessaire, un élément
+   flex refusant de descendre sous sa taille de contenu sans lui. */
+.capture-box {
+  flex: 1 1 auto; min-height: 0; resize: none;
+  background: var(--card); color: var(--f0);
+  border: 1px solid var(--rule); border-radius: var(--r-lg);
+  padding: 15px;
+  font-family: var(--ui); font-size: 17px; line-height: 1.45;
+}
+/* 17px minimum : en dessous de 16px, iOS et Android zooment au focus. */
+.capture-box:focus { outline: none; border-color: var(--accent-line); box-shadow: var(--ring); }
+.capture-box::placeholder { color: var(--f4); }
+
+/* Pré-tri : trois cibles larges, au pouce, au-dessus de l'envoi. */
+/* 2 × 2 depuis l'ajout de « Question » (2026-08-15) : à quatre pastilles sur
+   une seule rangée, « Réflexion » ne tient plus dans sa colonne sur un écran de
+   375 px, et une rangée de 3 + 1 orphelin est pire. Deux grandes cibles par
+   rangée, c'est aussi ce qui se clique le mieux au pouce. */
+.capture-kinds { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 10px; flex: none; }
+.capture-kind {
+  padding: 13px 4px;
+  font-family: var(--ui); font-size: 13px; font-weight: 500; letter-spacing: 0;
+  color: var(--f1);
+  background-color: var(--ctl); background-image: var(--glaze);
+  border: 1px solid var(--rule); border-radius: var(--r-md); cursor: pointer;
+  box-shadow: var(--sh-1);
+}
+.capture-kind:disabled { opacity: 0.35; cursor: default; }
+.capture-kind:not(:disabled):active {
+  color: var(--accent); background-color: var(--accent-soft); border-color: var(--accent-line);
+}
+
+.capture-send {
+  flex: none;
+  margin-top: 8px; padding: 16px;
+  font-family: var(--ui); font-size: 14px; font-weight: 600; letter-spacing: 0;
+  color: var(--accent-ink); background-color: var(--accent);
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0));
+  border: 0; border-radius: var(--r-lg); cursor: pointer;
+  box-shadow: var(--sh-2);
+}
+.capture-send:disabled { opacity: 0.35; cursor: default; box-shadow: none; }
+
+/* Pas de min-height : muet, il ne doit pas réserver d'espace au clavier. */
+.capture-foot {
+  flex: none; margin-top: 8px;
+  font-family: var(--ui); font-size: 12px; line-height: 1.5; color: var(--f3);
+}
+.capture-foot:empty { display: none; }
+.capture-warn { color: var(--warn); }
+
+/* Capture refusée pour de bon (4xx) : sortie de la file, affichée jusqu'à
+   l'abandon explicite. Le texte reste sélectionnable pour être récupéré. */
+.capture-rejected {
+  margin-top: 8px; padding: 10px 12px;
+  border: 1px solid var(--warn-line); border-radius: var(--r-md);
+  background: var(--warn-soft);
+}
+.capture-rejected-text {
+  margin: 4px 0 6px; color: var(--f1);
+  white-space: pre-wrap; overflow-wrap: anywhere; user-select: text;
+}
+.capture-rejected-drop {
+  padding: 0; border: none; background: none; cursor: pointer;
+  font-family: var(--ui); font-size: 12px; text-decoration: underline; color: var(--f3);
+}

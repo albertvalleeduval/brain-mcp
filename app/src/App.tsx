@@ -7,6 +7,7 @@ import { Reader } from "./Reader";
 import { HealthPage } from "./HealthPage";
 import { DecisionsPage } from "./DecisionsPage";
 import { ProjetsPage } from "./ProjetsPage";
+import { CapturePage } from "./CapturePage";
 import { EcheancesPage } from "./EcheancesPage";
 import { InboxPage } from "./InboxPage";
 import { JournalPage } from "./JournalPage";
@@ -59,6 +60,8 @@ export function App() {
   }, []);
 
   const route = parseRoute(useLocation());
+  // La capture est la surface du téléphone : elle ne doit dépendre de rien.
+  const isCapture = route.name === "capture";
   const openPath = route.name === "file" ? route.path : null;
   const openFile = useCallback((path: string) => navigate(fileUrl(path)), []);
   const closeFile = useCallback(() => navigate("/"), []);
@@ -104,7 +107,9 @@ export function App() {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  // Sur /capture on ne charge ni le graphe ni la santé : noter une idée ne doit
+  // jamais attendre un aller-retour réseau sur tout le brain.
+  useEffect(() => { if (!isCapture) load(); }, [load, isCapture]);
 
   const stalePaths = useMemo(
     () => (boot.s === "ready" ? new Set(boot.health.stale.map((x) => x.path)) : new Set<string>()),
@@ -158,6 +163,12 @@ export function App() {
       alert((e as Error).message);
     }
   }, [load, openFile]);
+
+  // Avant toute autre chose : la capture s'affiche même si le brain n'a pas
+  // (encore) chargé, et même hors ligne.
+  // Test direct (et non `isCapture`) pour que TypeScript restreigne `route`
+  // sur tout ce qui suit : la Sidebar n'a jamais à connaître cette route.
+  if (route.name === "capture") return <CapturePage />;
 
   if (boot.s === "loading") return <div className="loading">chargement du brain…</div>;
 
