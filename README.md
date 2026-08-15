@@ -35,15 +35,18 @@ markdown is the format you'll still be able to read in 30 years.
   backlinks, inline editor, inbox triage, health report (broken links, stale
   files, orphans), decision log, and a temporal replay of the brain's growth
   from git history. The UI language is currently French.
-- **Two themes, one anatomy** — a dark "observatory" mode (pure black, uniform
-  grey nodes, white re-ink, faint coordinate grid) and a light "Swiss grid"
-  mode (white paper, nodes colored by file type and sized by degree, Swiss
-  red). A segmented switch (light | auto | dark) lives on the graph page and
-  in the sidebar footer; **auto follows the actual sunset/sunrise** for your
-  location (NOAA formula, no API). All deltas live in CSS tokens and
-  `GRAPH_SKINS` — see `design/guidelines.md`. Set your coordinates in
-  `app/src/theme.ts` and in the inline script of `app/index.html`
-  (default: Paris).
+- **Two themes, one anatomy** ("Atelier") — stacked surfaces rather than
+  rules: the room, the panel, the card, the control, each lifted by a soft
+  shadow and an achromatic glaze instead of a heavier border. Generous radii,
+  Inter for the human voice and JetBrains Mono for the machine voice (both
+  self-hosted), and a neutral palette where color is semantic and rare: blue
+  for selection, green for healthy, amber for attention, red for urgency.
+  Dark mode is the default; light flips the same anatomy onto pale paper. A
+  segmented switch (light | auto | dark) lives on the graph page and in the
+  sidebar footer; **auto follows the actual sunset/sunrise** for your location
+  (NOAA formula, no API). All deltas live in CSS tokens and `GRAPH_SKINS` —
+  see `design/guidelines.md`. Set your coordinates in `app/src/theme.ts` and
+  in the inline script of `app/index.html` (default: Paris).
 - **PWA share target** — share a link/text from your phone straight into `inbox/`.
 
 ## Architecture
