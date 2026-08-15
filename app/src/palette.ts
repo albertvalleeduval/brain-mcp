@@ -1,19 +1,23 @@
-/** Peaux du graphe — une mécanique (Q Branch), deux styles.
+/** Peaux du graphe — une mécanique, deux styles.
  *
- *  Sombre : écran d'analyse Skyfall — points gris uniformes sur noir, la
- *  fraîcheur vit dans la valeur de gris, l'interaction ré-encre en blanc.
- *  Clair : palette catégorielle print (TYPE_COLORS ci-dessous) —
- *  couleur = type (dossier), taille ∝ degré, rouge suisse pour l'interaction.
+ *  Sombre : points gris uniformes sur le fond de l'app, la fraîcheur vit dans
+ *  la valeur de gris, l'interaction s'allume en bleu (--accent).
+ *  Clair : palette catégorielle — couleur = type (dossier), taille ∝ degré,
+ *  même bleu d'interaction.
+ *
+ *  Les valeurs suivent les tokens de app/src/styles.css : le canvas doit
+ *  peindre exactement le --paper du thème, sinon le graphe flotte sur une
+ *  plaque plus sombre que la pièce.
  */
 
 export type GraphTheme = "light" | "dark";
 
 /** Palette catégorielle print (thème clair) : couleur du nœud = dossier. */
 export const TYPE_COLORS: Record<string, string> = {
-  root: "#111111",
-  context: "#ef7d00",
-  people: "#2b4ee8",
-  projects: "#17a34a",
+  root: "#16161a",
+  context: "#e07a1a",
+  people: "#2f6bed",
+  projects: "#16a34a",
   personal: "#d62d84",
   decisions: "#b38600",
   domains: "#0d9c8b",
@@ -71,35 +75,35 @@ function mixTo(paper: [number, number, number]) {
 
 export const GRAPH_SKINS: Record<GraphTheme, GraphSkin> = {
   dark: {
-    paperCss: "#000000",
-    ink: "#e6e6e6",
-    accent: "#ffffff",
-    dim: "#1c1c1c",
-    label: "#a3a3a3",
-    edge: "rgba(255, 255, 255, 0.28)",
-    edgeDim: "rgba(255, 255, 255, 0.07)",
-    edgeOn: "rgba(255, 255, 255, 0.6)",
-    labelHalo: "rgba(0, 0, 0, 0.92)",
-    centerHalo: "rgba(255, 255, 255, 0.9)",
-    mix: mixTo([0, 0, 0]),
+    paperCss: "#08080a",
+    ink: "#f1f1f3",
+    accent: "#5b8dff",
+    dim: "#1e1e22",
+    label: "#8f8f99",
+    edge: "rgba(255, 255, 255, 0.22)",
+    edgeDim: "rgba(255, 255, 255, 0.06)",
+    edgeOn: "rgba(91, 141, 255, 0.7)",
+    labelHalo: "rgba(8, 8, 10, 0.92)",
+    centerHalo: "rgba(91, 141, 255, 0.85)",
+    mix: mixTo([8, 8, 10]),
     // Monochrome : gris clair uniforme, le centre « me » reste blanc pur.
-    nodeColor: (_folder, center) => (center ? "#ffffff" : "#b5b5b5"),
+    nodeColor: (_folder, center) => (center ? "#ffffff" : "#a8a8b2"),
     // Uniforme : la taille n'encode rien, le degré pilote seulement les labels.
     radius: () => 3,
   },
   light: {
-    paperCss: "#ffffff",
-    ink: "#111111",
-    accent: "#e2231a",
-    dim: "#e3e3e3",
-    label: "#6f6f6f",
-    edge: "rgba(17, 17, 17, 0.25)",
-    edgeDim: "rgba(17, 17, 17, 0.06)",
-    edgeOn: "rgba(226, 35, 26, 0.65)",
-    labelHalo: "rgba(255, 255, 255, 0.92)",
-    centerHalo: "rgba(17, 17, 17, 0.35)",
-    mix: mixTo([255, 255, 255]),
-    nodeColor: (folder, center) => (center ? "#111111" : typeColor(folder)),
+    paperCss: "#f4f4f6",
+    ink: "#16161a",
+    accent: "#2f6bed",
+    dim: "#dededf",
+    label: "#6b6b76",
+    edge: "rgba(22, 22, 26, 0.22)",
+    edgeDim: "rgba(22, 22, 26, 0.06)",
+    edgeOn: "rgba(47, 107, 237, 0.7)",
+    labelHalo: "rgba(244, 244, 246, 0.92)",
+    centerHalo: "rgba(47, 107, 237, 0.45)",
+    mix: mixTo([244, 244, 246]),
+    nodeColor: (folder, center) => (center ? "#16161a" : typeColor(folder)),
     // Print : taille ∝ degré, le centre domine. Base et pente resserrées
     // pour que les disques ne mangent pas le graphe.
     radius: (deg, center) => 2.4 + Math.sqrt(deg) * 1.3 + (center ? 3.5 : 0),

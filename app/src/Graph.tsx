@@ -1,12 +1,12 @@
 /**
- * Force graph — UNE mécanique (Q Branch), DEUX peaux (palette.ts → GRAPH_SKINS).
- * Mechanics kept from 1B: single setTransform per frame, continuous wheel zoom
- * toward the cursor, labels = hubs at rest + fade with zoom + hover boost,
- * hover re-inks the neighborhood and dims the rest. Sphère + dérive partout.
+ * Force graph — UNE mécanique, DEUX peaux (palette.ts → GRAPH_SKINS).
+ * Single setTransform per frame, continuous wheel zoom toward the cursor,
+ * labels = hubs at rest + fade with zoom + hover boost, hover re-inks the
+ * neighborhood and dims the rest. Sphère + dérive partout.
  *
- * Sombre : écran d'analyse Skyfall — points gris uniformes sur noir, la
- * fraîcheur dans la valeur de gris, ré-encrage blanc, centre blanc pulsant.
- * Clair : print — couleur = type (dossier), taille ∝ degré, rouge suisse à
+ * Sombre : points gris uniformes sur le fond de l'app, la fraîcheur dans la
+ * valeur de gris, interaction bleue, centre blanc pulsant.
+ * Clair : couleur = type (dossier), taille ∝ degré, même bleu à
  * l'interaction, fraîcheur fondue vers le papier.
  */
 
@@ -44,7 +44,7 @@ interface SimLink {
 
 export type LabelDensity = 0 | 1 | 2; // hubs | tous | aucun
 
-const MONO = `"IBM Plex Mono", ui-monospace, Consolas, monospace`;
+const MONO = `"JetBrains Mono", ui-monospace, Consolas, monospace`;
 // The central "me" node (graph.centerPath, from the Worker's CENTER_PATH var)
 // is pinned at center with a moat of empty space around it.
 /** Freshness → mix factor toward the paper: recent files are solid, old ones fade. */
@@ -186,7 +186,7 @@ export function Graph({
       centerNode.fx = w / 2; centerNode.fy = h / 2;
     }
 
-    // The brain is a SPHERE, à la Skyfall. Each node gets a deterministic
+    // The brain is a SPHERE. Each node gets a deterministic
     // target radius sampled like a point on a 3D ball projected to 2D
     // (r = R·√(1−z²), z uniform): dense at the rim, sparser through the core —
     // exactly the silhouette of a wireframe sphere. Links pulling across the
