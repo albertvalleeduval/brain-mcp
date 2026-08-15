@@ -170,6 +170,10 @@ export function Sidebar({
   const nextDeadline = deadlines
     .filter((d) => d.daysLeft !== null)
     .sort((a, b) => (a.daysLeft as number) - (b.daysLeft as number))[0];
+  // Une échéance dépassée compte des jours négatifs : `J-${-36}` donnait
+  // « J--36 », qu'Inter recompose en un tiret long. Même mot que la page
+  // Échéances, en plus court — le badge est étroit.
+  const daysLeft = nextDeadline?.daysLeft ?? null;
 
   const projects = graph.nodes.filter((n) => n.folder === "projects");
   const activeProjects = projects.filter((n) => !DONE.has((n.status ?? "").toLowerCase())).length;
@@ -191,8 +195,8 @@ export function Sidebar({
     {
       name: "echeances",
       label: "Échéances",
-      badge: nextDeadline ? `J-${nextDeadline.daysLeft}` : "—",
-      urgent: nextDeadline?.daysLeft != null && nextDeadline.daysLeft <= 7,
+      badge: daysLeft === null ? "—" : daysLeft < 0 ? `dépassé ${-daysLeft} j` : `J-${daysLeft}`,
+      urgent: daysLeft !== null && daysLeft <= 7,
     },
     {
       name: "inbox",
