@@ -48,6 +48,15 @@ markdown is the format you'll still be able to read in 30 years.
   see `design/guidelines.md`. Set your coordinates in `app/src/theme.ts` and
   in the inline script of `app/index.html` (default: Paris).
 - **PWA share target** — share a link/text from your phone straight into `inbox/`.
+- **Phone capture** at `/capture` — a standalone box for the idea you'd
+  otherwise lose in a notes app. Installable as its own home-screen icon
+  (separate manifest, `start_url: /capture`), it renders before the graph
+  loads and works offline: the text is queued in `localStorage` *before* the
+  network is touched, so a dead tunnel or an expired session costs nothing —
+  the queue drains on the next load and on `online`. Captures land appended to
+  `inbox/idees-YYYY-MM-DD.md`, one dated line each, no folder and no
+  classification: sorting is a separate, deliberate session. Optional pre-tag
+  (to-do / réflexion / projet / question) while the context is still in mind.
 
 ## Architecture
 
@@ -177,11 +186,12 @@ npx wrangler deploy
 Your MCP endpoint is the printed URL **+ `/mcp`**. If your OAuth App used a
 placeholder host, update its Homepage/callback URLs to the real one now.
 
-> The template ships without branding: add your own `favicon.svg`,
-> `icon-192.png` and `icon-512.png` to `app/public/`, then restore the
-> `<link rel="icon">` tags in `app/index.html` and the `icons` array in
-> `app/public/manifest.webmanifest` (icons are required for the PWA
-> install / share-target experience on mobile).
+> `app/public/` ships **placeholder** icons (`favicon.svg`, `icon-192.png`,
+> `icon-512.png`): a neutral little graph, no branding. They are there because
+> a PWA without icons doesn't install, which would break the phone capture and
+> the share target. Replace the three files with your own and rebuild — the
+> filenames are referenced from `app/index.html` and both manifests, so
+> keeping the names means nothing else to change.
 
 ### 7. Connect
 
@@ -189,6 +199,11 @@ placeholder host, update its Homepage/callback URLs to the real one now.
   the `/mcp` URL → Connect → log in with GitHub. Anyone who isn't
   `ALLOWED_LOGIN` gets a 403.
 - **Browser cockpit** → open the worker URL → "Se connecter avec GitHub".
+- **Phone** → open the worker URL in mobile Chrome/Safari, log in once (the
+  session cookie lasts 30 days), then use the browser's *Install* / *Add to
+  home screen*. Long-pressing the installed icon exposes the **Nouvelle idée**
+  shortcut; installing from `/capture` directly gives you a second icon that
+  opens straight into the capture box.
 
 ### 8. Smoke test
 
@@ -196,6 +211,18 @@ placeholder host, update its Homepage/callback URLs to the real one now.
 2. *"read my now.md"* → file content.
 3. *"add a test decision: validated the MCP write path"* → appends to
    `decisions/YYYY-MM.md`; confirm the commit on GitHub.
+4. Open `/capture`, type anything, send → a new line in
+   `inbox/idees-<today>.md` on GitHub. Turn airplane mode on and send another
+   one: it stays queued and leaves as soon as the network is back.
+
+### Triaging what you capture
+
+Capture is deliberately dumb, so `inbox/` fills up with day-files. Emptying
+them is a separate session, and Claude does the work through the same MCP
+tools: *"read `inbox/idees-2026-08-15.md`, ask me about anything ambiguous,
+then file each line where it belongs and delete the inbox file"*. Nothing
+classifies on its own — an idea filed by guesswork is worse than an idea left
+in the inbox.
 
 ## Local development
 
