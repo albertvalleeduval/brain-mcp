@@ -10,6 +10,7 @@
  *   GET  /api/health  -> HealthReport JSON
  *   GET  /api/file    -> ?path=now.md -> {path, content}
  *   POST /api/inbox   -> {filename, content} -> staged (dumb capture, no LLM)
+ *   POST /api/capture -> {text, kind?} -> appended to today's idea day-file
  *
  * Auth model: same single-user GitHub gate as the MCP flow. A successful
  * login stores a random session id in OAUTH_KV (30 days) behind an HttpOnly
@@ -22,7 +23,7 @@ import type { OAuthHelpers } from "@cloudflare/workers-oauth-provider";
 import type { Context } from "hono";
 import { getAllFiles, getFile, listCommits, listTreesAtCommits, GitHubError, type ReplayFrame } from "./brain";
 import { buildGraph, buildHealth } from "./graph";
-import { stageToInbox, deleteInboxItem, upsertFile, updateNow, appendDecision } from "./ops";
+import { stageToInbox, deleteInboxItem, upsertFile, updateNow, appendDecision, appendIdea } from "./ops";
 import { todayLocal, timeLocal } from "./dates";
 import { cfg } from "./config";
 import {
@@ -373,6 +374,21 @@ browserApp.post("/api/now", async (c) => {
 });
 
 /** Append a dated decision (append-only). */
+/**
+ * Dumb capture: no LLM, no classification, no folder choice. The triage
+ * session does all of that later. The phone posts here from /capture.
+ */
+browserApp.post("/api/capture", async (c) => {
+  const body = await json<{ text?: string; kind?: string }>(c as Ctx);
+  if (!body?.text) return c.json({ error: "text is required" }, 400);
+  try {
+    const res = await appendIdea(c.env.GITHUB_BRAIN_TOKEN, body.text, body.kind);
+    return c.json({ path: res.path, commit: res.commitSha, line: res.line });
+  } catch (e) {
+    return writeError(c as Ctx, e);
+  }
+});
+
 browserApp.post("/api/decision", async (c) => {
   const body = await json<{ text?: string }>(c as Ctx);
   if (!body?.text) return c.json({ error: "text is required" }, 400);

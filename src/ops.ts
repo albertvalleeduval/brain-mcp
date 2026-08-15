@@ -13,7 +13,7 @@ import {
   GitHubError,
 } from "./brain";
 import { checkFilename, checkPath, detectSecret, normalizePath } from "./guards";
-import { todayLocal as today, currentMonthLocal as currentMonth } from "./dates";
+import { todayLocal as today, currentMonthLocal as currentMonth, clockLocal as clock } from "./dates";
 
 /** Stage a raw note into inbox/ (dumb capture — never overwrites). */
 export async function stageToInbox(
@@ -39,6 +39,61 @@ export async function stageToInbox(
   // above, the write 409s rather than clobbering the other note.
   const res = await putFile(token, path, content, `inbox: add ${name}`, null);
   return { path, commitSha: res.commitSha };
+}
+
+/**
+ * Append one captured idea to today's inbox day-file (dumb capture, no LLM).
+ *
+ * One file per day rather than one file per idea: a day of captures reads as
+ * a list, and triage opens one file instead of twenty. Format is `- HH:MM
+ * text`, continuation lines indented by two spaces so a multi-line capture
+ * stays ONE markdown item.
+ *
+ * `kind` is an optional pre-assignment made at capture time, while the
+ * context is still in mind — `- 14:32 [todo] call the accountant`. It does
+ * not replace triage, it spares it a guess. Whitelisted: an arbitrary string
+ * must never reach the file.
+ */
+const IDEA_KINDS = new Set(["todo", "reflexion", "projet", "question"]);
+
+export async function appendIdea(
+  token: string,
+  text: string,
+  kind?: string,
+): Promise<{ path: string; commitSha: string; line: string }> {
+  const clean = text.replace(/\r\n?/g, "\n").trim();
+  if (!clean) throw new GitHubError(400, "Empty capture.");
+  if (clean.length > 4000) throw new GitHubError(413, "Capture too long (4000 characters max).");
+  const secret = detectSecret(clean);
+  if (secret) throw new GitHubError(400, `Refused: content looks like a secret (${secret}). Not written.`);
+
+  const day = today();
+  const path = `inbox/idees-${day}.md`;
+
+  const k = (kind ?? "").trim().toLowerCase();
+  if (k && !IDEA_KINDS.has(k)) throw new GitHubError(400, `Unknown kind "${k}".`);
+  const mark = k ? `[${k}] ` : "";
+
+  const lines = clean.split("\n").map((l) => l.trim());
+  let entry = `- ${clock()} ${mark}${lines[0]}\n`;
+  for (const l of lines.slice(1)) if (l) entry += `  ${l}\n`;
+
+  // Read-modify-write: another capture may land between the read and the put.
+  // Passing the sha WE read makes putFile 409 on that race (instead of
+  // re-reading the sha itself and silently dropping the interleaved line),
+  // so re-read and retry.
+  for (let attempt = 0; ; attempt++) {
+    const existing = await getFile(token, path);
+    const base = existing?.content ?? `# Idées du ${day}\n\n`;
+    const next = (base.endsWith("\n") ? base : `${base}\n`) + entry;
+    try {
+      const res = await putFile(token, path, next, `inbox: capture (${day})`, existing ? existing.sha : null);
+      return { path, commitSha: res.commitSha, line: entry.trim() };
+    } catch (e) {
+      if (e instanceof GitHubError && e.status === 409 && attempt < 3) continue;
+      throw e;
+    }
+  }
 }
 
 /**

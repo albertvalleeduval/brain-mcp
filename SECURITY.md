@@ -25,10 +25,11 @@ after auth.
    unforgeable (a forged cookie matches no KV entry → 401). Cookie is
    `HttpOnly` + `Secure` + `SameSite=Lax`. The `/api/*` middleware re-checks
    identity on every request. WRITE routes (PUT /api/file, POST /api/now,
-   /api/decision, /api/inbox/delete) go through that same middleware, then
-   through the guards in `src/ops.ts` (allowed folders, secret refusal,
-   decisions/ append-only, delete restricted to inbox/). An anonymous caller
-   gets 401 before any write.
+   /api/decision, /api/capture, /api/inbox/delete) go through that same
+   middleware, then through the guards in `src/ops.ts` (allowed folders,
+   secret refusal, decisions/ append-only, delete restricted to inbox/,
+   captures capped at 4000 characters and confined to `inbox/`). An anonymous
+   caller gets 401 before any write.
 4. **The GitHub token that reads the repo** (`GITHUB_BRAIN_TOKEN`) lives only
    as a Wrangler secret — never client-side, never in the bundle.
 5. **Stored XSS** (ingested content): the Reader escapes raw HTML, neutralizes

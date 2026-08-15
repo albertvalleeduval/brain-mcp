@@ -16,14 +16,18 @@ export function currentMonthLocal(): string {
   return todayLocal().slice(0, 7); // YYYY-MM
 }
 
-/** HHmm (owner timezone) — used to stamp capture filenames. */
-export function timeLocal(): string {
+/** HH:MM (owner timezone) — a clock reading, for text meant to be read. */
+export function clockLocal(): string {
   return new Intl.DateTimeFormat("en-GB", {
     timeZone: cfg().timezone,
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
-  })
-    .format(new Date())
-    .replace(":", "");
+  }).format(new Date());
+}
+
+/** HHmm (owner timezone) — used to stamp capture FILENAMES, hence no colon.
+ *  For a timestamp inside a file's text, use clockLocal(). */
+export function timeLocal(): string {
+  return clockLocal().replace(":", "");
 }
