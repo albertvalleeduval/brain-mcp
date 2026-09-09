@@ -307,10 +307,11 @@ a, button, input, select, textarea, .tile, .hrow, .prow, .jrow, .erow, .tl-item 
 }
 .brand .meta b { color: var(--f1); font-weight: 500; }
 
+.search { position: relative; }
 .search input {
   width: 100%; border: 1px solid var(--rule);
   border-radius: var(--r-md);
-  font-family: var(--ui); font-size: 13px; padding: 9px 13px;
+  font-family: var(--ui); font-size: 13px; padding: 9px 40px 9px 13px;
   background-color: var(--ctl); background-image: var(--glaze);
   color: var(--ink);
   box-shadow: var(--sh-1);
@@ -321,6 +322,22 @@ a, button, input, select, textarea, .tile, .hrow, .prow, .jrow, .erow, .tl-item 
   outline: none; border-color: var(--accent-line);
   box-shadow: var(--ring);
 }
+/* La croix native fait 12px de côté, hit area comprise : impossible à viser.
+   On la retire au profit de .search-clear, même glyphe dans une cible de 32. */
+.search input::-webkit-search-cancel-button,
+.search input::-webkit-search-decoration {
+  -webkit-appearance: none; appearance: none;
+}
+.search-clear {
+  position: absolute; top: 50%; right: 3px; transform: translateY(-50%);
+  width: 32px; height: 32px; padding: 0;
+  border: 1px solid transparent; background: none; cursor: pointer;
+  font-size: 15px; line-height: 1; color: var(--f3);
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: var(--r-sm);
+}
+.search-clear:hover { color: var(--f0); background: var(--ctl-hi); border-color: var(--rule); }
+.search-clear:focus-visible { outline: none; box-shadow: var(--ring); }
 
 /* nav — une ligne arrondie par destination, l'active en bleu dilué */
 .nav { display: flex; flex-direction: column; gap: 2px; }

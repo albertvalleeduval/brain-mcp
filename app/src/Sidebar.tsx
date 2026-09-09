@@ -4,6 +4,7 @@
  *  Collapsed, the sidebar slides down to a 56px icon rail (same custom icon
  *  set as the tiles); both layers coexist and cross-fade during the slide. */
 
+import { useRef } from "react";
 import type { BrainGraph, HealthReport, Commit } from "./types";
 import type { NavName } from "./router";
 import { parseFocus, parseDeadlines } from "./nowparse";
@@ -164,6 +165,7 @@ export function Sidebar({
   themeResolved: "light" | "dark";
   onThemeSet: (m: "auto" | "light" | "dark") => void;
 }) {
+  const searchInput = useRef<HTMLInputElement>(null);
   const focus = parseFocus(nowBody);
   const deadlines = parseDeadlines(nowBody, health.generatedOn);
 
@@ -233,12 +235,27 @@ export function Sidebar({
 
         <div className="search">
           <input
+            ref={searchInput}
             type="search"
             placeholder="rechercher dans le brain…"
             aria-label="Rechercher"
             value={search}
             onChange={(e) => onSearch(e.target.value)}
           />
+          {/* Croix maison : celle de <input type="search"> fait 12px de côté,
+              hit area comprise, et rate un clic sur deux. Même glyphe que la
+              fermeture du reader, dans une cible de 32px. */}
+          {search !== "" && (
+            <button
+              type="button"
+              className="search-clear"
+              aria-label="Effacer la recherche"
+              title="Effacer la recherche"
+              onClick={() => { onSearch(""); searchInput.current?.focus(); }}
+            >
+              ✕
+            </button>
+          )}
         </div>
 
         <section className="sec">
