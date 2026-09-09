@@ -104,8 +104,12 @@ export const GRAPH_SKINS: Record<GraphTheme, GraphSkin> = {
     centerHalo: "rgba(47, 107, 237, 0.45)",
     mix: mixTo([244, 244, 246]),
     nodeColor: (folder, center) => (center ? "#16161a" : typeColor(folder)),
-    // Print : taille ∝ degré, le centre domine. Base et pente resserrées
-    // pour que les disques ne mangent pas le graphe.
-    radius: (deg, center) => 2.4 + Math.sqrt(deg) * 1.3 + (center ? 3.5 : 0),
+    // Print : taille ∝ degré, le centre domine. Même loi en racine qu'avant,
+    // base et pente rabaissées d'environ un cinquième, plus un plafond dur :
+    // au-delà d'une quarantaine de liens la racine continuait de gonfler les
+    // quelques hubs (decisions/, context-astry) jusqu'à ~13px de rayon, où le
+    // disque recouvrait ses voisins. Le centre garde son bonus par-dessus le
+    // plafond, il doit rester le plus gros.
+    radius: (deg, center) => Math.min(2.2 + Math.sqrt(deg) * 0.95, 8.5) + (center ? 3 : 0),
   },
 };
