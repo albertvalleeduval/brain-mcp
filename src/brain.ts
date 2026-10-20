@@ -243,65 +243,6 @@ export async function listCommits(
   return out.slice(0, count);
 }
 
-export interface ReplayFrame {
-  sha: string;
-  date: string;
-  files: string[];
-}
-
-/**
- * Markdown file list at each given commit, batched in ONE GraphQL request
- * (tree entries expanded 2 levels — the brain is one folder deep).
- */
-export async function listTreesAtCommits(
-  token: string,
-  commits: { sha: string; date: string }[],
-): Promise<ReplayFrame[]> {
-  if (!commits.length) return [];
-  const fields = commits
-    .map(
-      (c, i) =>
-        `c${i}: object(oid: ${JSON.stringify(c.sha)}) { ... on Commit { tree { entries { name type object { ... on Tree { entries { name type } } } } } } }`,
-    )
-    .join("\n");
-  const query = `query { repository(owner: ${JSON.stringify(cfg().owner)}, name: ${JSON.stringify(cfg().repo)}) {\n${fields}\n} }`;
-
-  const res = await fetch(`${API}/graphql`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-      "User-Agent": "brain-mcp",
-    },
-    body: JSON.stringify({ query }),
-  });
-  if (!res.ok) throw new GitHubError(res.status, `Could not read commit trees (${res.status}).`);
-
-  type Entry = { name: string; type: string; object?: { entries?: { name: string; type: string }[] } | null };
-  const data = (await res.json()) as {
-    data?: { repository?: Record<string, { tree?: { entries?: Entry[] } } | null> };
-    errors?: { message: string }[];
-  };
-  const repo = data.data?.repository;
-  if (!repo) {
-    throw new GitHubError(502, `Could not read commit trees: ${data.errors?.[0]?.message ?? "empty response"}.`);
-  }
-
-  return commits.map((c, i) => {
-    const entries = repo[`c${i}`]?.tree?.entries ?? [];
-    const files: string[] = [];
-    for (const e of entries) {
-      if (e.type === "blob" && e.name.toLowerCase().endsWith(".md")) files.push(e.name);
-      if (e.type === "tree") {
-        for (const s of e.object?.entries ?? []) {
-          if (s.type === "blob" && s.name.toLowerCase().endsWith(".md")) files.push(`${e.name}/${s.name}`);
-        }
-      }
-    }
-    return { sha: c.sha, date: c.date, files };
-  });
-}
-
 /* ---------- writes ---------- */
 
 /**

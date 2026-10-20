@@ -21,7 +21,7 @@ import { Hono } from "hono";
 import { getCookie, setCookie, deleteCookie } from "hono/cookie";
 import type { OAuthHelpers } from "@cloudflare/workers-oauth-provider";
 import type { Context } from "hono";
-import { getAllFiles, getFile, listCommits, listTreesAtCommits, GitHubError, type ReplayFrame } from "./brain";
+import { getAllFiles, getFile, listCommits, GitHubError } from "./brain";
 import { buildGraph, buildHealth } from "./graph";
 import { stageToInbox, deleteInboxItem, upsertFile, updateNow, appendDecision, appendIdea } from "./ops";
 import { todayLocal, timeLocal } from "./dates";
@@ -166,7 +166,7 @@ interface BootCache {
 }
 
 browserApp.get("/api/boot", async (c) => {
-  // L'historique est du confort (replay, journal) : son échec ne doit pas
+  // L'historique est du confort (journal) : son échec ne doit pas
   // empêcher le brain de s'afficher — mais sans lui, pas de sha de tête,
   // donc pas de cache non plus.
   const [history, cachedRaw] = await Promise.all([
@@ -222,31 +222,6 @@ browserApp.get("/api/health", async (c) => {
 
 browserApp.get("/api/history", async (c) => {
   return c.json(await listCommits(c.env.GITHUB_BRAIN_TOKEN));
-});
-
-/**
- * Replay timeline: the brain's file list at up to 40 evenly-sampled commits,
- * oldest → newest. 1 REST req per 100 commits + 1 GraphQL req for ALL trees.
- * Cached per head sha (immutable history).
- */
-const REPLAY_FRAMES = 40;
-let replayCache: { head: string; frames: ReplayFrame[] } | null = null;
-
-browserApp.get("/api/replay", async (c) => {
-  const commits = await listCommits(c.env.GITHUB_BRAIN_TOKEN, 500);
-  if (!commits.length) return c.json({ frames: [] });
-  if (replayCache?.head === commits[0].sha) return c.json({ frames: replayCache.frames });
-
-  const chrono = [...commits].reverse();
-  const sampled =
-    chrono.length <= REPLAY_FRAMES
-      ? chrono
-      : Array.from({ length: REPLAY_FRAMES }, (_, i) =>
-          chrono[Math.round((i * (chrono.length - 1)) / (REPLAY_FRAMES - 1))],
-        );
-  const frames = await listTreesAtCommits(c.env.GITHUB_BRAIN_TOKEN, sampled);
-  replayCache = { head: commits[0].sha, frames };
-  return c.json({ frames });
 });
 
 /** Full-text search: paths whose BODY contains q. Feeds the UI's secondary
