@@ -206,7 +206,7 @@ export function App() {
         ) : (
           <>
             <div className="graph-wrap">
-              <Graph graph={graph} theme={theme} stalePaths={stalePaths} search={search} contentHits={contentHits} density={density} hoverLabels={hoverLabels} onOpen={openFile} />
+              <Graph graph={graph} theme={theme} stalePaths={stalePaths} search={search} contentHits={contentHits} density={density} hoverLabels={hoverLabels} selected={openPath} onOpen={openFile} />
               {/* Toggle de thème : uniquement sur la page graphe, en overlay
                   haut-droite. Il s'efface quand une fiche est ouverte — le
                   Reader occupe ce coin (l'exemplaire permanent vit au pied

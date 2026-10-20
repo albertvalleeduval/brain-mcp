@@ -86,6 +86,7 @@ export function Graph({
   contentHits,
   density,
   hoverLabels,
+  selected,
   onOpen,
 }: {
   graph: BrainGraph;
@@ -98,6 +99,8 @@ export function Graph({
   density: LabelDensity;
   /** Survol : faux = le voisinage s'allume sans qu'aucun nom ne s'affiche. */
   hoverLabels: boolean;
+  /** Fiche ouverte : son voisinage reste allumé tant qu'aucun nœud n'est survolé. */
+  selected: string | null;
   onOpen: (path: string) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -117,8 +120,8 @@ export function Graph({
     pan: { x: number; y: number } | null;
     moved: boolean;
   }>({ nodes: [], links: [], sim: null, retune: null, time: 0, k: 1, tx: 0, ty: 0, hover: null, drag: null, pan: null, moved: false });
-  const propsRef = useRef({ search, contentHits, density, stalePaths, hoverLabels });
-  propsRef.current = { search, contentHits, density, stalePaths, hoverLabels };
+  const propsRef = useRef({ search, contentHits, density, stalePaths, hoverLabels, selected });
+  propsRef.current = { search, contentHits, density, stalePaths, hoverLabels, selected };
   const skinRef = useRef(GRAPH_SKINS[theme]);
   skinRef.current = GRAPH_SKINS[theme];
 
@@ -248,7 +251,7 @@ export function Graph({
     }
     draw();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, contentHits, density, stalePaths, hoverLabels]);
+  }, [search, contentHits, density, stalePaths, hoverLabels, selected]);
 
   /** Drift: each node wanders around its resting spot, a deterministic ~3px
    *  orbit per path (two superposed sines → organic, not metronomic). Pure
@@ -268,7 +271,7 @@ export function Graph({
     if (!canvas) return;
     const st = stateRef.current;
     const skin = skinRef.current;
-    const { density, hoverLabels } = propsRef.current;
+    const { density, hoverLabels, selected } = propsRef.current;
     const ctx = canvas.getContext("2d")!;
     const rect = canvas.getBoundingClientRect();
     const dpr = window.devicePixelRatio || 1;
@@ -281,7 +284,8 @@ export function Graph({
     ctx.clearRect(0, 0, rect.width, rect.height);
     ctx.setTransform(dpr * st.k, 0, 0, dpr * st.k, dpr * st.tx, dpr * st.ty);
 
-    const hover = st.hover;
+    // Le survol prime ; sinon la fiche ouverte garde son voisinage allumé.
+    const hover = st.hover ?? (selected ? st.nodes.find((n) => n.path === selected) ?? null : null);
     const neigh = new Set<SimNode>();
     if (hover) {
       for (const l of st.links) {
