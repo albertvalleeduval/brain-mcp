@@ -119,7 +119,6 @@ const routes: Record<string, unknown> = {
   "/api/graph": graph,
   "/api/health": health,
   "/api/history": commits,
-  "/api/replay": { frames: [] },
 };
 
 const realFetch = window.fetch.bind(window);

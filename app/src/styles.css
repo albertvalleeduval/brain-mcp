@@ -109,7 +109,6 @@
   /* Grille de fond : points, pas de lignes. Elle respire derrière le graphe
      et disparaît presque complètement du reste. */
   --grid-dot: rgba(255, 255, 255, 0.055);
-  --thumb-glow: 0 0 0 4px rgba(91, 141, 255, 0.18);
   --reader-shadow: var(--sh-pop);
 
   --mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
@@ -160,7 +159,6 @@
   --ring: 0 0 0 3px rgba(47, 107, 237, 0.22);
   --selection: rgba(47, 107, 237, 0.18);
   --grid-dot: rgba(15, 18, 30, 0.07);
-  --thumb-glow: 0 0 0 4px rgba(47, 107, 237, 0.16);
   --reader-shadow: var(--sh-pop);
 }
 
@@ -501,33 +499,6 @@ a, button, input, select, textarea, .tile, .hrow, .prow, .jrow, .erow, .tl-item 
 .legend-item { display: inline-flex; align-items: center; gap: 6px; }
 .legend-sq { width: 7px; height: 7px; display: inline-block; border-radius: 50%; }
 .vsep { width: 1px; align-self: stretch; background: var(--rule); flex: none; }
-/* Scrubber de replay : rail arrondi, pastille bleue avec halo au contact. */
-.replay {
-  display: flex; align-items: center; gap: 14px;
-  padding: 10px 2px 12px;
-}
-.replay input[type="range"] {
-  flex: 1; appearance: none; -webkit-appearance: none;
-  height: 4px; border-radius: var(--r-pill);
-  background: var(--ctl); border: 1px solid var(--rule); outline: none;
-}
-.replay input[type="range"]::-webkit-slider-thumb {
-  appearance: none; -webkit-appearance: none;
-  width: 14px; height: 14px; background: var(--accent);
-  border: 0; border-radius: 50%; cursor: pointer;
-  box-shadow: var(--sh-1);
-}
-.replay input[type="range"]::-moz-range-thumb {
-  width: 14px; height: 14px; background: var(--accent);
-  border: 0; border-radius: 50%; cursor: pointer;
-  box-shadow: var(--sh-1);
-}
-.replay input[type="range"]:hover::-webkit-slider-thumb { box-shadow: var(--thumb-glow); }
-.replay input[type="range"]:focus-visible::-webkit-slider-thumb { box-shadow: var(--ring); }
-.replay-meta {
-  font-family: var(--mono); font-size: 11px; color: var(--f3);
-  font-variant-numeric: tabular-nums; white-space: nowrap;
-}
 
 .pane-foot {
   display: flex; justify-content: space-between; align-items: center;

@@ -56,9 +56,3 @@ export interface Commit {
   message: string;
   date: string;
 }
-
-export interface ReplayFrame {
-  sha: string;
-  date: string;
-  files: string[];
-}

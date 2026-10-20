@@ -85,7 +85,7 @@ export function Graph({
   search,
   contentHits,
   density,
-  visible,
+  hoverLabels,
   onOpen,
 }: {
   graph: BrainGraph;
@@ -96,8 +96,8 @@ export function Graph({
   /** Paths whose BODY matches the search (secondary tier, half ink). */
   contentHits: Set<string>;
   density: LabelDensity;
-  /** Replay mode: only these paths are drawn. null = everything. */
-  visible: Set<string> | null;
+  /** Survol : faux = le voisinage s'allume sans qu'aucun nom ne s'affiche. */
+  hoverLabels: boolean;
   onOpen: (path: string) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -117,8 +117,8 @@ export function Graph({
     pan: { x: number; y: number } | null;
     moved: boolean;
   }>({ nodes: [], links: [], sim: null, retune: null, time: 0, k: 1, tx: 0, ty: 0, hover: null, drag: null, pan: null, moved: false });
-  const propsRef = useRef({ search, contentHits, density, stalePaths, visible });
-  propsRef.current = { search, contentHits, density, stalePaths, visible };
+  const propsRef = useRef({ search, contentHits, density, stalePaths, hoverLabels });
+  propsRef.current = { search, contentHits, density, stalePaths, hoverLabels };
   const skinRef = useRef(GRAPH_SKINS[theme]);
   skinRef.current = GRAPH_SKINS[theme];
 
@@ -248,7 +248,7 @@ export function Graph({
     }
     draw();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, contentHits, density, stalePaths, visible]);
+  }, [search, contentHits, density, stalePaths, hoverLabels]);
 
   /** Drift: each node wanders around its resting spot, a deterministic ~3px
    *  orbit per path (two superposed sines → organic, not metronomic). Pure
@@ -268,8 +268,7 @@ export function Graph({
     if (!canvas) return;
     const st = stateRef.current;
     const skin = skinRef.current;
-    const { density } = propsRef.current;
-    const { visible } = propsRef.current;
+    const { density, hoverLabels } = propsRef.current;
     const ctx = canvas.getContext("2d")!;
     const rect = canvas.getBoundingClientRect();
     const dpr = window.devicePixelRatio || 1;
@@ -337,7 +336,6 @@ export function Graph({
     for (const l of st.links) {
       const s = l.source as SimNode, t = l.target as SimNode;
       if (s.x == null || t.x == null) continue;
-      if (visible && !(visible.has(s.path) && visible.has(t.path))) continue;
       const on = hover && (s === hover || t === hover);
       const dimmed = (hover && !on) || (searching && !(s.match && t.match));
       const [sx, sy] = wob(st, s);
@@ -372,7 +370,6 @@ export function Graph({
 
     for (const n of st.nodes) {
       if (n.x == null) continue;
-      if (visible && !visible.has(n.path)) continue;
       const isHover = n === hover;
       const isNeigh = neigh.has(n);
       // Search tiers: title/path match = full ink; body-only match = half ink.
@@ -429,14 +426,17 @@ export function Graph({
         ctx.shadowBlur = 0;
       }
 
+      // Noms au survol coupés : le hover garde l'anneau et les arêtes
+      // allumées, mais ne force plus aucun label (les densités jouent seules).
+      const lit = hoverLabels && (isHover || isNeigh);
       let alpha = 0;
-      if (isHover || isNeigh) alpha = 1;
+      if (lit) alpha = 1;
       else if (secondary) alpha = 0; // half-ink dot only, no label noise
       else if (!dimmed && density === 1) alpha = Math.max(zoomAlpha, 0.9);
       else if (!dimmed && density === 0) alpha = n.hub ? 1 : zoomAlpha;
       if (searching && n.match && !dimmed) alpha = 1; // primary matches always labeled
-      if (density === 2 && !isHover && !isNeigh) alpha = 0;
-      if (alpha > 0.02) labels.push({ n, alpha, strong: isHover || isNeigh, dimmed });
+      if (density === 2 && !lit) alpha = 0;
+      if (alpha > 0.02) labels.push({ n, alpha, strong: lit, dimmed });
     }
 
     // Second pass: labels on top. Centered UNDER the node and lifted off the
@@ -493,10 +493,8 @@ export function Graph({
     const hit = (cx: number, cy: number): SimNode | null => {
       const [wx, wy] = toWorld(cx, cy);
       let best: SimNode | null = null, bd = Infinity;
-      const vis = propsRef.current.visible;
       for (const n of st.nodes) {
         if (n.x == null) continue;
-        if (vis && !vis.has(n.path)) continue;
         const d = Math.hypot(wx - n.x!, wy - n.y!);
         if (d < n.r + 6 / st.k && d < bd) { best = n; bd = d; }
       }

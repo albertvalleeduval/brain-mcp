@@ -1,6 +1,6 @@
 /** Thin client over the Worker's /api routes. A 401 anywhere means: no session. */
 
-import type { BrainGraph, HealthReport, Commit, ReplayFrame } from "./types";
+import type { BrainGraph, HealthReport, Commit } from "./types";
 
 export class Unauthorized extends Error {}
 
@@ -34,7 +34,6 @@ export const fetchBoot = () => get<BootPayload>("/api/boot");
 export const fetchGraph = () => get<BrainGraph>("/api/graph");
 export const fetchHealth = () => get<HealthReport>("/api/health");
 export const fetchHistory = () => get<Commit[]>("/api/history");
-export const fetchReplay = () => get<{ frames: ReplayFrame[] }>("/api/replay");
 export const fetchSearch = (q: string) =>
   get<{ paths: string[] }>('/api/search?q=' + encodeURIComponent(q));
 

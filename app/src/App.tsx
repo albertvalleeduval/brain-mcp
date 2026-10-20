@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { fetchBoot, fetchReplay, fetchSearch, saveFile, Unauthorized } from "./api";
-import type { BrainGraph, HealthReport, Commit, ReplayFrame } from "./types";
+import { fetchBoot, fetchSearch, saveFile, Unauthorized } from "./api";
+import type { BrainGraph, HealthReport, Commit } from "./types";
 import { Sidebar } from "./Sidebar";
 import { Graph, type LabelDensity } from "./Graph";
 import { Reader } from "./Reader";
@@ -45,9 +45,16 @@ export function App() {
   // Densité au chargement : « aucun » — le brain s'ouvre nu, les labels
   // viennent à la demande.
   const [density, setDensity] = useState<LabelDensity>(2);
-  const [replay, setReplay] = useState<{ frames: ReplayFrame[]; i: number; playing: boolean } | null>(null);
-  const [replayLoading, setReplayLoading] = useState(false);
-  const timer = useRef<number | null>(null);
+  // Noms au survol : coupés, le survol n'allume plus que les liens. Mémorisé
+  // comme le repli de la sidebar.
+  const [hoverLabels, setHoverLabels] = useState(() => localStorage.getItem("hover-labels") !== "0");
+  const toggleHoverLabels = useCallback(() => {
+    setHoverLabels((v) => {
+      const next = !v;
+      localStorage.setItem("hover-labels", next ? "1" : "0");
+      return next;
+    });
+  }, []);
   const [contentHits, setContentHits] = useState<Set<string>>(new Set());
   const [pendingEdit, setPendingEdit] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem("side-collapsed") === "1");
@@ -116,36 +123,6 @@ export function App() {
     [boot],
   );
 
-  useEffect(() => {
-    if (timer.current) { window.clearInterval(timer.current); timer.current = null; }
-    if (replay?.playing) {
-      timer.current = window.setInterval(() => {
-        setReplay((r) => (r && r.i < r.frames.length - 1 ? { ...r, i: r.i + 1 } : r));
-      }, 220);
-    }
-    return () => { if (timer.current) window.clearInterval(timer.current); };
-  }, [replay?.playing]);
-
-  useEffect(() => {
-    if (replay?.playing && replay.i >= replay.frames.length - 1) {
-      const t = window.setTimeout(() => setReplay(null), 1100);
-      return () => window.clearTimeout(t);
-    }
-  }, [replay]);
-
-  async function startReplay() {
-    if (replay) return;
-    setReplayLoading(true);
-    try {
-      const { frames } = await fetchReplay();
-      if (frames.length) setReplay({ frames, i: 0, playing: true });
-    } catch (e) {
-      alert((e as Error).message);
-    } finally {
-      setReplayLoading(false);
-    }
-  }
-
   // Create a stub file for a broken [[link]], then open it in edit mode.
   const createStub = useCallback(async (target: string, path: string) => {
     const folder = path.split("/")[0];
@@ -193,8 +170,6 @@ export function App() {
   }
 
   const { graph, health, history, nowBody } = boot;
-  const frame = replay ? replay.frames[replay.i] : null;
-  const visible = frame ? new Set(frame.files) : null;
 
   return (
     <div className="frame">
@@ -231,7 +206,7 @@ export function App() {
         ) : (
           <>
             <div className="graph-wrap">
-              <Graph graph={graph} theme={theme} stalePaths={stalePaths} search={search} contentHits={contentHits} density={density} visible={visible} onOpen={openFile} />
+              <Graph graph={graph} theme={theme} stalePaths={stalePaths} search={search} contentHits={contentHits} density={density} hoverLabels={hoverLabels} onOpen={openFile} />
               {/* Toggle de thème : uniquement sur la page graphe, en overlay
                   haut-droite. Il s'efface quand une fiche est ouverte — le
                   Reader occupe ce coin (l'exemplaire permanent vit au pied
@@ -242,21 +217,6 @@ export function App() {
                 </div>
               )}
             </div>
-            {replay && frame && (
-              <div className="replay">
-                <button className="box" onClick={() => setReplay({ ...replay, playing: !replay.playing })}>
-                  {replay.playing ? "Pause" : "Lecture"}
-                </button>
-                <input
-                  type="range" min={0} max={replay.frames.length - 1} value={replay.i}
-                  aria-label="Position dans l'historique"
-                  onChange={(e) => setReplay({ ...replay, i: Number(e.target.value), playing: false })}
-                />
-                <span className="replay-meta">
-                  {frame.date.slice(0, 10)} · {frame.files.length} fichiers · commit {replay.i + 1}/{replay.frames.length}
-                </span>
-              </div>
-            )}
             <div className="pane-foot">
               <div className="legend">
                 {/* En clair, la couleur code le type : la légende redevient
@@ -272,8 +232,8 @@ export function App() {
               </div>
               <span className="vsep" aria-hidden="true"></span>
               <div className="btns">
-                <button className="box" onClick={startReplay} disabled={replayLoading || !!replay}>
-                  {replayLoading ? "chargement…" : replay ? "replay…" : "Rejouer l'historique"}
+                <button className="box" onClick={toggleHoverLabels} aria-pressed={hoverLabels}>
+                  noms au survol : {hoverLabels ? "affichés" : "masqués"}
                 </button>
                 <button className="box" onClick={() => setDensity(((density + 1) % 3) as LabelDensity)}>
                   densité labels : {["hubs", "tous", "aucun"][density]}

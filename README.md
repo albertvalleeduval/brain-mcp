@@ -33,8 +33,7 @@ markdown is the format you'll still be able to read in 30 years.
 - **Web cockpit** at the Worker root (GitHub-gated session): force-directed
   knowledge graph (canvas + d3-force), file reader with wiki-links and
   backlinks, inline editor, inbox triage, health report (broken links, stale
-  files, orphans), decision log, and a temporal replay of the brain's growth
-  from git history. The UI language is currently French.
+  files, orphans), and a decision log from git history. The UI language is currently French.
 - **Two themes, one anatomy** ("Atelier") — stacked surfaces rather than
   rules: the room, the panel, the card, the control, each lifted by a soft
   shadow and an achromatic glaze instead of a heavier border. Generous radii,
